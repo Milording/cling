@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginError: String?
     @AppStorage("soundEnabled") private var soundEnabled = true
+    @AppStorage("useRealityKit") private var useRealityKit = false
 
     /// SMAppService only works from a real .app bundle, not `swift run`.
     private var isBundled: Bool { Bundle.main.bundleIdentifier != nil }
@@ -32,6 +33,10 @@ struct SettingsView: View {
                     .onChange(of: model.devMode) { _, newValue in
                         if !newValue { showDev = false }
                     }
+
+                if #available(macOS 15.0, *) {
+                    Toggle("Medal renderer: RealityKit (experimental)", isOn: $useRealityKit)
+                }
             } header: {
                 Text("General")
             } footer: {

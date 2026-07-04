@@ -80,18 +80,20 @@ final class AppModel {
                 render(preview(.dark), scale: 2, to: directory.appendingPathComponent("popover-dark.png"))
                 render(SocialPreviewView(), scale: 1, to: directory.appendingPathComponent("social-preview.png"))
 
-                // Detail view + medal at a few rotation angles (design review).
+                // Coin medal snapshots at a few rotations (SceneKit, offscreen).
                 let hello = Achievements.byID(Achievements.helloClaude)!
-                render(AchievementDetailView(achievement: hello, unlockDate: .now, onClose: {})
-                    .frame(width: 360, height: 620)
-                    .environment(self), scale: 2,
-                    to: directory.appendingPathComponent("detail.png"))
-                for a in [0.0, 30.0, 62.0, 90.0] {
-                    render(MedalView(achievement: hello, unlocked: true, diameter: 190, initialAngle: a)
-                        .frame(width: 240, height: 220)
-                        .background(Color(nsColor: .windowBackgroundColor)),
-                        scale: 2, to: directory.appendingPathComponent("medal-\(Int(a)).png"))
+                for (id, deg) in [(Achievements.helloClaude, 0.0), (Achievements.helloClaude, 35.0),
+                                  (Achievements.helloClaude, 180.0), (Achievements.multitasker, 30.0),
+                                  (Achievements.marathon, 30.0)] {
+                    let a = Achievements.byID(id)!
+                    let image = CoinMedal.snapshot(achievement: a, unlocked: true,
+                                                   angle: deg * .pi / 180, size: 520)
+                    if let data = NSBitmapImageRep(data: image.tiffRepresentation!)?
+                        .representation(using: .png, properties: [:]) {
+                        try? data.write(to: directory.appendingPathComponent("coin-\(id)-\(Int(deg)).png"))
+                    }
                 }
+                _ = hello
                 NSApplication.shared.terminate(nil)
             }
         }

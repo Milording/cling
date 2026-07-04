@@ -9,8 +9,20 @@ struct AchievementDetailView: View {
 
     @Environment(AppModel.self) private var model
     @State private var orientation: ShareCardLayout = .horizontal
+    @AppStorage("useRealityKit") private var useRealityKit = false
 
     private var unlocked: Bool { unlockDate != nil }
+
+    @ViewBuilder
+    private var medal: some View {
+        if useRealityKit, #available(macOS 15.0, *) {
+            CoinMedalRealityView(achievement: achievement, unlocked: unlocked)
+                .frame(width: 210, height: 210)
+        } else {
+            CoinMedalView(achievement: achievement, unlocked: unlocked)
+                .frame(width: 210, height: 210)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,7 +41,7 @@ struct AchievementDetailView: View {
 
             Spacer(minLength: 8)
 
-            MedalView(achievement: achievement, unlocked: unlocked, diameter: 190)
+            medal
 
             Text(achievement.name)
                 .font(.system(size: 24, weight: .bold, design: .rounded))

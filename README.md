@@ -29,9 +29,16 @@ unlock with an Xbox 360–style toast — including a sound effect — in the co
 <img src="assets/toast.png" width="520" alt="Achievement unlocked toast">
 </div>
 
+Tap any medal to flip it into a **real 3D coin** — spin it with your mouse, icon on the front, points on the back:
+
+<div align="center">
+<img src="assets/coin.png" width="240" alt="Spinnable 3D coin medal">
+</div>
+
 ## 🎮 Features
 
 - **🏅 Achievement system** — 7 achievements across Bronze, Silver, and Gold tiers, worth 290 points total.
+- **🪙 Spinnable 3D coin medals** — each achievement is a photoreal metal coin (bronze/silver/gold) you can drag to rotate, with inertia.
 - **🔔 Xbox-style unlock toasts** — a springy badge animation with a real sound, that you can hover to keep open.
 - **🖼️ Shareable cards** — turn any unlocked achievement into a polished image for your socials (vertical *story* and horizontal *post* layouts).
 - **🧭 Menu bar native** — a clean, [Numi](https://numi.app)-inspired popover; no Dock icon, no clutter, follows light/dark mode.
