@@ -1,0 +1,140 @@
+import SwiftUI
+
+struct PopoverView: View {
+    @Environment(AppModel.self) private var model
+    @State private var showSettings = false
+    @State private var showDev = false
+
+    /// When true, the achievement grid is drawn without a `ScrollView` so the
+    /// whole popover renders in a single `ImageRenderer` pass (for screenshots).
+    var staticRender = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+            Divider()
+            if showSettings {
+                SettingsView(showDev: $showDev)
+                Spacer(minLength: 0)
+            } else if showDev {
+                DevModeView()
+            } else {
+                summary
+                if staticRender {
+                    AchievementGrid()
+                } else {
+                    achievementList
+                }
+            }
+            Divider()
+            footer
+        }
+        .frame(width: 360)
+        .frame(minHeight: staticRender ? nil : 500,
+               idealHeight: staticRender ? nil : 680,
+               maxHeight: staticRender ? nil : .infinity)
+    }
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(model.status.color)
+                .frame(width: 8, height: 8)
+                .shadow(color: model.status.color.opacity(0.7), radius: 3)
+            Text("Claude Code")
+                .font(.system(size: 13, weight: .semibold))
+            Text(model.status.label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button {
+                showSettings.toggle()
+                showDev = false
+            } label: {
+                Image(systemName: showSettings ? "xmark" : "gearshape")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help(showSettings ? "Close settings" : "Settings")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    private var summary: some View {
+        let _ = model.stateVersion
+        return VStack(spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(model.totalPoints)")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.accent)
+                Text("P")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.accent.opacity(0.7))
+                Spacer()
+                Text("\(model.unlockedCount) of \(Achievements.all.count) unlocked")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            ProgressBar(fraction: Double(model.totalPoints) / Double(Achievements.maxPoints),
+                        color: Theme.accent)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+
+    private var achievementList: some View {
+        ScrollView {
+            AchievementGrid()
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var footer: some View {
+        HStack {
+            if model.devMode {
+                Button {
+                    showDev.toggle()
+                    showSettings = false
+                } label: {
+                    Image(systemName: "flask")
+                        .font(.system(size: 14))
+                        .foregroundStyle(showDev ? Theme.accent : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Dev mode")
+            }
+            Spacer()
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                Image(systemName: "power")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Quit Cling")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+}
+
+struct ProgressBar: View {
+    let fraction: Double
+    let color: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.quaternary.opacity(0.6))
+                Capsule()
+                    .fill(color)
+                    .frame(width: max(4, geo.size.width * min(1, fraction)))
+                    .opacity(fraction > 0 ? 1 : 0)
+            }
+        }
+        .frame(height: 4)
+    }
+}

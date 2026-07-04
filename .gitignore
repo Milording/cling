@@ -1,0 +1,23 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Build output
+dist/
+
+# Xcode (in case a project is generated locally)
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+
+# Editors
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+*.swp
+
+# Local worktrees
+.worktrees/
