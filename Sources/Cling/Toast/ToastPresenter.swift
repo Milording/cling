@@ -44,7 +44,9 @@ final class ToastPresenter {
         }
 
         self.panel = panel
-        sounds.play(unlock.achievement.sound)
+        if UserDefaults.standard.object(forKey: "soundEnabled") as? Bool ?? true {
+            sounds.play(unlock.achievement.sound)
+        }
         panel.orderFrontRegardless()
     }
 

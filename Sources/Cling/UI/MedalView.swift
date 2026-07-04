@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// A medal that reads as a real, shiny 3D object: a stack of thin slices gives
-/// it thickness and a polished metallic edge, a reflective glare sweeps across
-/// the face as it turns, and dragging spins it — with inertia when you let go.
+/// A medal that reads as a real, shiny 3D object cast from a single metal
+/// (bronze / silver / gold): a stack of thin slices gives it thickness and a
+/// polished edge, a bevelled rim with concentric grooves frames a satin face,
+/// a reflective glare sweeps across as it turns, and dragging spins it — with
+/// inertia when you let go.
 struct MedalView: View {
     let achievement: Achievement
     let unlocked: Bool
@@ -20,18 +22,34 @@ struct MedalView: View {
     private var thickness: CGFloat { diameter * 0.13 }
     private let slices = 28
 
-    /// Polished, "turned metal" ring — alternating bright/dark stops catch light all around.
-    private static let metal = AngularGradient(stops: [
-        .init(color: Color(white: 0.99), location: 0.00),
-        .init(color: Color(white: 0.55), location: 0.13),
-        .init(color: Color(white: 0.93), location: 0.25),
-        .init(color: Color(white: 0.50), location: 0.37),
-        .init(color: Color(white: 0.99), location: 0.50),
-        .init(color: Color(white: 0.55), location: 0.63),
-        .init(color: Color(white: 0.90), location: 0.75),
-        .init(color: Color(white: 0.48), location: 0.87),
-        .init(color: Color(white: 0.99), location: 1.00),
-    ], center: .center)
+    // MARK: Metal derived from the tier colour
+
+    private var base: Color { unlocked ? achievement.tier.color : Color(white: 0.62) }
+    private var highlight: Color { base.adjustingBrightness(by: 0.40) }
+    private var shadow: Color { base.adjustingBrightness(by: -0.32) }
+
+    /// Polished, "turned metal" ring — alternating bright/dark stops of the same
+    /// metal catch light all around the rim and edge.
+    private var metal: AngularGradient {
+        AngularGradient(stops: [
+            .init(color: highlight, location: 0.00),
+            .init(color: shadow,    location: 0.13),
+            .init(color: base,      location: 0.25),
+            .init(color: shadow,    location: 0.37),
+            .init(color: highlight, location: 0.50),
+            .init(color: shadow,    location: 0.63),
+            .init(color: base,      location: 0.75),
+            .init(color: shadow,    location: 0.87),
+            .init(color: highlight, location: 1.00),
+        ], center: .center)
+    }
+
+    /// Softer, satin version of the same metal for the medal's face.
+    private var satin: LinearGradient {
+        LinearGradient(colors: [base.adjustingBrightness(by: 0.16), base,
+                                base.adjustingBrightness(by: -0.14)],
+                       startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
 
     var body: some View {
         let rad = angle * .pi / 180
@@ -49,7 +67,7 @@ struct MedalView: View {
                             .scaleEffect(x: max(0.0015, absCos), y: 1)
                     } else {
                         Ellipse()
-                            .fill(Self.metal)
+                            .fill(metal)
                             .frame(width: max(diameter * absCos, bridge), height: diameter)
                     }
                 }
@@ -68,9 +86,7 @@ struct MedalView: View {
         .contentShape(Rectangle())
         .gesture(dragGesture)
         .accessibilityLabel("\(achievement.name) medal. Drag to rotate.")
-        .onAppear {
-            angle = initialAngle
-        }
+        .onAppear { angle = initialAngle }
         .onDisappear {
             inertia?.invalidate()
             inertia = nil
@@ -117,28 +133,20 @@ struct MedalView: View {
         (CGFloat(i) / CGFloat(slices - 1) - 0.5) * thickness
     }
 
-    private var innerFill: AnyShapeStyle {
-        unlocked
-            ? AnyShapeStyle(LinearGradient(
-                colors: [achievement.tier.color, achievement.tier.color.opacity(0.6)],
-                startPoint: .topLeading, endPoint: .bottomTrailing))
-            : AnyShapeStyle(LinearGradient(
-                colors: [Color(white: 0.56), Color(white: 0.4)],
-                startPoint: .topLeading, endPoint: .bottomTrailing))
-    }
-
     private func face(front: Bool) -> some View {
-        let rim = diameter * 0.085
+        let rim = diameter * 0.10
         return ZStack {
-            Circle().fill(Self.metal)                              // polished metal ring
-            Circle().stroke(.black.opacity(0.18), lineWidth: 1)    // rim seam
-                .padding(rim * 0.5)
+            Circle().fill(metal)                                   // polished bevelled rim
 
-            Circle().fill(innerFill).padding(rim)                  // colored face
+            // Concentric grooves machined into the bevel.
+            Circle().strokeBorder(shadow.opacity(0.6), lineWidth: 1).padding(rim * 0.42)
+            Circle().strokeBorder(highlight.opacity(0.7), lineWidth: 1).padding(rim * 0.62)
 
-            // Domed spherical shading: highlight top-left, shadow bottom-right.
+            Circle().fill(satin).padding(rim)                      // satin face
+
+            // Domed shading: highlight top-left, shadow bottom-right.
             Circle()
-                .fill(RadialGradient(colors: [.white.opacity(0.4), .clear],
+                .fill(RadialGradient(colors: [.white.opacity(0.35), .clear],
                                      center: .init(x: 0.32, y: 0.28),
                                      startRadius: 0, endRadius: diameter * 0.55))
                 .padding(rim)
@@ -156,20 +164,21 @@ struct MedalView: View {
 
     @ViewBuilder
     private func content(front: Bool) -> some View {
-        let tint: Color = unlocked ? .white : Color(white: 0.85)
-        if front {
-            LucideText(icon: achievement.icon, size: diameter * 0.34)
-                .foregroundStyle(tint)
-                .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
-        } else {
-            VStack(spacing: 2) {
-                LucideText(icon: .trophy, size: diameter * 0.24)
-                Text("+\(achievement.points)P")
-                    .font(.system(size: diameter * 0.11, weight: .bold, design: .rounded))
+        let engraved = Color.white.opacity(unlocked ? 0.95 : 0.8)
+        Group {
+            if front {
+                LucideText(icon: achievement.icon, size: diameter * 0.34)
+            } else {
+                VStack(spacing: 2) {
+                    LucideText(icon: .trophy, size: diameter * 0.24)
+                    Text("+\(achievement.points)P")
+                        .font(.system(size: diameter * 0.11, weight: .bold, design: .rounded))
+                }
             }
-            .foregroundStyle(tint)
-            .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
         }
+        .foregroundStyle(engraved)
+        .shadow(color: .black.opacity(0.28), radius: 1, y: 1.5)   // embossed / raised
+        .shadow(color: .white.opacity(0.25), radius: 0.5, y: -0.5)
     }
 
     /// A diagonal light streak whose position tracks rotation, so it sweeps as the medal turns.
@@ -178,7 +187,7 @@ struct MedalView: View {
             .truncatingRemainder(dividingBy: 360) / 360           // 0…1
         return Rectangle()
             .fill(LinearGradient(
-                colors: [.clear, .white.opacity(0.5), .clear],
+                colors: [.clear, .white.opacity(0.45), .clear],
                 startPoint: .leading, endPoint: .trailing))
             .frame(width: diameter * 0.42)
             .rotationEffect(.degrees(22))

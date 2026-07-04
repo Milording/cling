@@ -4,8 +4,10 @@ import SwiftUI
 /// can also be rendered directly (offscreen `ImageRenderer` won't draw scroll content).
 struct AchievementGrid: View {
     var onSelect: (Achievement) -> Void = { _ in }
+    @Environment(AppModel.self) private var model
 
     var body: some View {
+        let _ = model.stateVersion // re-order when unlocks change
         VStack(alignment: .leading, spacing: 20) {
             ForEach(Tier.allCases, id: \.self) { tier in
                 tierSection(tier)
@@ -16,7 +18,10 @@ struct AchievementGrid: View {
     }
 
     private func tierSection(_ tier: Tier) -> some View {
-        let items = Achievements.all.filter { $0.tier == tier }
+        // Completed medals first (order otherwise preserved).
+        let tierItems = Achievements.all.filter { $0.tier == tier }
+        let items = tierItems.filter { model.engine.isUnlocked($0.id) }
+            + tierItems.filter { !model.engine.isUnlocked($0.id) }
         let rows = stride(from: 0, to: items.count, by: 3).map {
             Array(items[$0..<min($0 + 3, items.count)])
         }

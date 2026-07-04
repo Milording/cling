@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// App palette: #ee6055 #60d394 #aaf683 #ffd97d #ff9b85 plus system black/white shades.
 /// UI chrome otherwise uses semantic system colors and materials (HIG-native).
@@ -17,6 +18,15 @@ extension Color {
         self.init(red: Double((hex >> 16) & 0xFF) / 255,
                   green: Double((hex >> 8) & 0xFF) / 255,
                   blue: Double(hex & 0xFF) / 255)
+    }
+
+    /// Lighten (positive) or darken (negative) by adjusting HSB brightness.
+    func adjustingBrightness(by delta: CGFloat) -> Color {
+        let ns = NSColor(self).usingColorSpace(.sRGB) ?? NSColor.gray
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ns.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        return Color(hue: Double(h), saturation: Double(s),
+                     brightness: Double(max(0, min(1, b + delta))), opacity: Double(a))
     }
 }
 
