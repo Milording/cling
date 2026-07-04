@@ -78,6 +78,7 @@ final class AppModel {
                 }
                 render(preview(.light), scale: 2, to: directory.appendingPathComponent("popover-light.png"))
                 render(preview(.dark), scale: 2, to: directory.appendingPathComponent("popover-dark.png"))
+                render(SocialPreviewView(), scale: 1, to: directory.appendingPathComponent("social-preview.png"))
                 NSApplication.shared.terminate(nil)
             }
         }
