@@ -2,7 +2,7 @@
 
 # 🏆 Cling
 
-### Xbox-style achievements for your Claude Code usage — right in the macOS menu bar.
+### Xbox-style achievements for your Claude Code usage.
 
 Cling quietly watches how you use [Claude Code](https://claude.com/claude-code) and rewards you with
 **achievements, points, and a satisfying unlock toast + sound** the moment you hit a milestone.

@@ -3,6 +3,8 @@ import SwiftUI
 /// The tier-grouped, 3-column medal grid. Extracted from the scroll view so it
 /// can also be rendered directly (offscreen `ImageRenderer` won't draw scroll content).
 struct AchievementGrid: View {
+    var onSelect: (Achievement) -> Void = { _ in }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             ForEach(Tier.allCases, id: \.self) { tier in
@@ -28,7 +30,9 @@ struct AchievementGrid: View {
             VStack(spacing: 18) {
                 ForEach(rows.indices, id: \.self) { r in
                     HStack(alignment: .top, spacing: 12) {
-                        ForEach(rows[r]) { AchievementCell(achievement: $0) }
+                        ForEach(rows[r]) { achievement in
+                            AchievementCell(achievement: achievement, onSelect: onSelect)
+                        }
                         ForEach(0..<(3 - rows[r].count), id: \.self) { _ in
                             Color.clear.frame(maxWidth: .infinity)
                         }

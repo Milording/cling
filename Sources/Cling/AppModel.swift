@@ -79,6 +79,19 @@ final class AppModel {
                 render(preview(.light), scale: 2, to: directory.appendingPathComponent("popover-light.png"))
                 render(preview(.dark), scale: 2, to: directory.appendingPathComponent("popover-dark.png"))
                 render(SocialPreviewView(), scale: 1, to: directory.appendingPathComponent("social-preview.png"))
+
+                // Detail view + medal at a few rotation angles (design review).
+                let hello = Achievements.byID(Achievements.helloClaude)!
+                render(AchievementDetailView(achievement: hello, unlockDate: .now, onClose: {})
+                    .frame(width: 360, height: 620)
+                    .environment(self), scale: 2,
+                    to: directory.appendingPathComponent("detail.png"))
+                for a in [0.0, 30.0, 62.0, 90.0] {
+                    render(MedalView(achievement: hello, unlocked: true, diameter: 190, initialAngle: a)
+                        .frame(width: 240, height: 220)
+                        .background(Color(nsColor: .windowBackgroundColor)),
+                        scale: 2, to: directory.appendingPathComponent("medal-\(Int(a)).png"))
+                }
                 NSApplication.shared.terminate(nil)
             }
         }

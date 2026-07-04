@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// One medal in the achievements grid: badge, name, and points/progress.
-/// Unlocked medals are tappable and present a share popover.
+/// Tapping any medal opens its detail view.
 struct AchievementCell: View {
     let achievement: Achievement
+    var onSelect: (Achievement) -> Void = { _ in }
     @Environment(AppModel.self) private var model
-    @State private var showingShare = false
 
     private var unlockDate: Date? {
         let _ = model.stateVersion
@@ -16,17 +16,13 @@ struct AchievementCell: View {
         let unlocked = unlockDate != nil
         VStack(spacing: 8) {
             Button {
-                if unlocked { showingShare = true }
+                onSelect(achievement)
             } label: {
                 AchievementBadge(achievement: achievement, unlocked: unlocked, size: 84)
                     .shadow(color: unlocked ? achievement.tier.color.opacity(0.35) : .clear,
                             radius: 6, y: 2)
             }
             .buttonStyle(.plain)
-            .disabled(!unlocked)
-            .popover(isPresented: $showingShare, arrowEdge: .bottom) {
-                sharePopover
-            }
 
             Text(achievement.name)
                 .font(.system(size: 13, weight: .semibold))
@@ -64,27 +60,5 @@ struct AchievementCell: View {
                 .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundStyle(.tertiary)
         }
-    }
-
-    private var sharePopover: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                AchievementBadge(achievement: achievement, unlocked: true, size: 40)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(achievement.name).font(.headline)
-                    Text(achievement.blurb)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            if let date = unlockDate {
-                Text("Unlocked \(date.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption)
-                    .foregroundStyle(achievement.tier.color)
-                ShareBar(achievement: achievement, unlockDate: date)
-            }
-        }
-        .padding(14)
-        .frame(width: 280)
     }
 }

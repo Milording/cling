@@ -4,30 +4,43 @@ struct PopoverView: View {
     @Environment(AppModel.self) private var model
     @State private var showSettings = false
     @State private var showDev = false
+    @State private var selected: Achievement?
 
     /// When true, the achievement grid is drawn without a `ScrollView` so the
     /// whole popover renders in a single `ImageRenderer` pass (for screenshots).
     var staticRender = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            if showSettings {
-                SettingsView(showDev: $showDev)
-                Spacer(minLength: 0)
-            } else if showDev {
-                DevModeView()
-            } else {
-                summary
-                if staticRender {
-                    AchievementGrid()
+        ZStack {
+            VStack(spacing: 0) {
+                header
+                Divider()
+                if showSettings {
+                    SettingsView(showDev: $showDev)
+                    Spacer(minLength: 0)
+                } else if showDev {
+                    DevModeView()
                 } else {
-                    achievementList
+                    summary
+                    if staticRender {
+                        AchievementGrid()
+                    } else {
+                        achievementList
+                    }
                 }
+                Divider()
+                footer
             }
-            Divider()
-            footer
+
+            if let selected {
+                let _ = model.stateVersion
+                AchievementDetailView(
+                    achievement: selected,
+                    unlockDate: model.engine.state.unlocked[selected.id],
+                    onClose: { withAnimation(.easeInOut(duration: 0.2)) { self.selected = nil } }
+                )
+                .transition(.opacity)
+            }
         }
         .frame(width: 360)
         .frame(minHeight: staticRender ? nil : 500,
@@ -64,21 +77,17 @@ struct PopoverView: View {
 
     private var summary: some View {
         let _ = model.stateVersion
-        return VStack(spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("\(model.totalPoints)")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.accent)
-                Text("P")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Theme.accent.opacity(0.7))
-                Spacer()
-                Text("\(model.unlockedCount) of \(Achievements.all.count) unlocked")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            ProgressBar(fraction: Double(model.totalPoints) / Double(Achievements.maxPoints),
-                        color: Theme.accent)
+        return HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("\(model.totalPoints)")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.accent)
+            Text("P")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Theme.accent.opacity(0.7))
+            Spacer()
+            Text("\(model.unlockedCount) of \(Achievements.all.count) unlocked")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -86,7 +95,9 @@ struct PopoverView: View {
 
     private var achievementList: some View {
         ScrollView {
-            AchievementGrid()
+            AchievementGrid(onSelect: { achievement in
+                withAnimation(.easeInOut(duration: 0.2)) { selected = achievement }
+            })
         }
         .frame(maxHeight: .infinity)
     }
