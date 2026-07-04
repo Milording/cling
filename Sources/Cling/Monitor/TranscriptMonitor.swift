@@ -75,7 +75,7 @@ final class TranscriptMonitor {
         offsets[path] = offset + UInt64(complete.count)
 
         guard let text = String(data: complete, encoding: .utf8) else { return [] }
-        return text.split(separator: "\n").compactMap { JSONLParser.parse(line: String($0)) }
+        return text.split(separator: "\n").flatMap { JSONLParser.parse(line: String($0)) }
     }
 
     private func transcriptFiles() -> [URL] {

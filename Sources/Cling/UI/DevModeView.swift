@@ -35,41 +35,45 @@ struct DevModeView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     devButton("Send a message") {
-                        model.handle([.userMessage(text: "Hello from dev mode",
-                                                   timestamp: .now, sessionID: devSession)])
+                        model.handle([.user(text: "Hello from dev mode",
+                                            timestamp: .now, sessionID: devSession)])
                     }
-                    devButton("+250k output tokens") {
-                        model.handle([.assistantMessage(outputTokens: 250_000,
-                                                        timestamp: .now, sessionID: devSession)])
+                    devButton("+1M tokens (Millionaire I)") {
+                        model.handle([.assistant(usage: Usage(input: 500_000, output: 500_000),
+                                                 model: "claude-sonnet-4", timestamp: .now,
+                                                 sessionID: devSession)])
                     }
-                    devButton("+10 please/thank you") {
-                        let text = Array(repeating: "please", count: 10).joined(separator: " ")
-                        model.handle([.userMessage(text: text, timestamp: .now, sessionID: devSession)])
+                    devButton("+15 please/thank you") {
+                        let text = Array(repeating: "please", count: 15).joined(separator: " ")
+                        model.handle([.user(text: text, timestamp: .now, sessionID: devSession)])
                     }
-                    devButton("Message at 1 AM (Night Owl)") {
-                        model.handle([.userMessage(text: "night shift",
-                                                   timestamp: next1AM(), sessionID: devSession)])
+                    devButton("10 nights (Night Owl I)") {
+                        let base = next1AM()
+                        model.handle((0..<10).map {
+                            .user(text: "night", timestamp: base.addingTimeInterval(Double($0) * 86400),
+                                  sessionID: devSession)
+                        })
                     }
-                    devButton("5 conversations today (Multitasker)") {
-                        let events = (0..<5).map {
-                            TranscriptEvent.userMessage(text: "hi", timestamp: .now,
-                                                        sessionID: "dev-session-\($0)")
-                        }
-                        model.handle(events)
+                    devButton("3 sessions at once (Multitasker)") {
+                        model.handle((0..<3).map {
+                            .user(text: "hi", timestamp: .now, sessionID: "dev-session-\($0)")
+                        })
                     }
-                    devButton("31-minute wait (Homunculus)") {
-                        model.handle([
-                            .userMessage(text: "are you there?", timestamp: .now, sessionID: "dev-wait"),
-                            .assistantMessage(outputTokens: 1, timestamp: .now.addingTimeInterval(31 * 60),
-                                              sessionID: "dev-wait"),
-                        ])
+                    devButton("/doctor ×10") {
+                        model.handle((0..<10).map { _ in
+                            .slashCommand(name: "doctor", timestamp: .now, sessionID: devSession)
+                        })
                     }
-                    devButton("6-hour streak (Marathon)") {
-                        let start = Date.now
-                        let events = stride(from: 0.0, through: Achievements.marathonGoal, by: 25)
-                            .map { TranscriptEvent.activity(timestamp: start.addingTimeInterval($0),
-                                                            sessionID: "dev-marathon") }
-                        model.handle(events)
+                    devButton("10 git commits") {
+                        model.handle((0..<10).map { _ in
+                            .toolUse(name: "Bash", input: "{\"command\":\"git commit -m x\"}",
+                                     timestamp: .now, sessionID: devSession)
+                        })
+                    }
+                    devButton("100 interruptions (Rage Quit I)") {
+                        model.handle((0..<100).map { _ in
+                            .interrupted(timestamp: .now, sessionID: devSession)
+                        })
                     }
                 }
 

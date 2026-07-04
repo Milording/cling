@@ -14,17 +14,19 @@ struct AchievementCell: View {
 
     var body: some View {
         let unlocked = unlockDate != nil
+        let masked = achievement.hidden && !unlocked
         VStack(spacing: 8) {
             Button {
                 onSelect(achievement)
             } label: {
-                AchievementBadge(achievement: achievement, unlocked: unlocked, size: 84)
+                AchievementBadge(achievement: achievement, unlocked: unlocked, size: 84,
+                                 hiddenLocked: masked)
                     .shadow(color: unlocked ? achievement.tier.color.opacity(0.35) : .clear,
                             radius: 6, y: 2)
             }
             .buttonStyle(.plain)
 
-            Text(achievement.name)
+            Text(masked ? "???" : achievement.name)
                 .font(.system(size: 13, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(unlocked ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))

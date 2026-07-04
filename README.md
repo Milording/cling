@@ -37,7 +37,7 @@ Tap any medal to flip it into a **real 3D coin** — spin it with your mouse, ic
 
 ## 🎮 Features
 
-- **🏅 Achievement system** — 7 achievements across Bronze, Silver, and Gold tiers, worth 290 points total.
+- **🏅 Achievement system** — **67 achievements** across Bronze, Silver, Gold, and Platinum tiers, worth 2,125 points, including secret hidden ones.
 - **🪙 Spinnable 3D coin medals** — each achievement is a photoreal metal coin (bronze/silver/gold) you can drag to rotate, with inertia.
 - **🔔 Xbox-style unlock toasts** — a springy badge animation with a real sound, that you can hover to keep open.
 - **🖼️ Shareable cards** — turn any unlocked achievement into a polished image for your socials (vertical *story* and horizontal *post* layouts).
@@ -49,15 +49,22 @@ Tap any medal to flip it into a **real 3D coin** — spin it with your mouse, ic
 
 ## 🏆 Achievements
 
-| Tier | Achievement | Points | How to unlock |
-|:----:|-------------|:------:|---------------|
-| 🥉 Bronze | **Hello, Claude** | 10 | Send your first message |
-| 🥉 Bronze | **First Blood** | 15 | Generate your first 1,000,000 tokens |
-| 🥉 Bronze | **Night Owl** | 15 | Use Claude Code after midnight |
-| 🥈 Silver | **Multitasker** | 25 | Have 5 conversations open in one day |
-| 🥈 Silver | **Please & Thank You** | 25 | Say "please" or "thank you" 50 times |
-| 🥇 Gold | **Homunculus loxodontus** | 100 | Wait more than 30 minutes for a response |
-| 🥇 Gold | **The Marathon** | 100 | A single 6-hour session with no gap over 30 seconds |
+67 achievements, earned live from your local Claude Code activity — a few tastes:
+
+| Tier | Achievement | How to unlock |
+|:----:|-------------|---------------|
+| 🥉 Bronze | **First Contact** | Send your very first message |
+| 🥉 Bronze | **Night Owl I** | Code 10 nights between midnight and 5 AM |
+| 🥉 Bronze | **Git Gud I** | 10 git commits |
+| 🥈 Silver | **Millionaire's Club II** | Generate 10,000,000 tokens |
+| 🥈 Silver | **Weekend Warrior** | Code both days of 10 weekends |
+| 🥈 Silver | **Potty Mouth II** | Swear 25 times |
+| 🥇 Gold | **Daily Driver III** | A 100-day streak |
+| 🥇 Gold | **Car Payment** | $500 of estimated usage |
+| 💎 Platinum | **Daily Driver IV** | A 365-day streak |
+| 💎 Platinum | **100% Claude Completion** | Unlock everything else |
+
+…plus tiered **Millionaire's Club**, **Thank You Please**, **Doctor**, **Feedback**, **Context Goblin**, **Project Hopper**, **Approver**, **CTRL+C Rage Quit** ladders — and a handful of **🔒 hidden** ones you'll have to discover yourself.
 
 <div align="center">
 <img src="assets/card-horizontal.png" width="560" alt="Shareable achievement card">

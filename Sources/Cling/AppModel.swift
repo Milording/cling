@@ -55,7 +55,7 @@ final class AppModel {
             Task { @MainActor in
                 monitor.stop() // preview only — never persist the forced unlocks below
                 try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-                let sample = Achievements.byID(Achievements.nightOwl)!
+                let sample = Achievements.byID("night-owl-1")!
                 for layout in ShareCardLayout.allCases {
                     if let data = ShareCardRenderer.pngData(for: sample, unlockDate: .now, layout: layout) {
                         try? data.write(to: directory.appendingPathComponent("card-\(layout.rawValue).png"))
@@ -67,8 +67,8 @@ final class AppModel {
                 render(toast, scale: 2, to: directory.appendingPathComponent("toast.png"))
 
                 // Force a couple of unlocks (in-memory only) so the grid shows both states.
-                engine.unlock(Achievements.helloClaude)
-                engine.unlock(Achievements.multitasker)
+                engine.unlock("first-contact")
+                engine.unlock("multitasker")
                 stateVersion += 1
                 func preview(_ scheme: ColorScheme) -> some View {
                     PopoverView(staticRender: true)
@@ -81,10 +81,9 @@ final class AppModel {
                 render(SocialPreviewView(), scale: 1, to: directory.appendingPathComponent("social-preview.png"))
 
                 // Coin medal snapshots at a few rotations (SceneKit, offscreen).
-                let hello = Achievements.byID(Achievements.helloClaude)!
-                for (id, deg) in [(Achievements.helloClaude, 0.0), (Achievements.helloClaude, 35.0),
-                                  (Achievements.helloClaude, 180.0), (Achievements.multitasker, 30.0),
-                                  (Achievements.marathon, 30.0)] {
+                for (id, deg) in [("first-contact", 0.0), ("first-contact", 35.0),
+                                  ("first-contact", 180.0), ("multitasker", 30.0),
+                                  ("daily-driver-4", 30.0)] {
                     let a = Achievements.byID(id)!
                     let image = CoinMedal.snapshot(achievement: a, unlocked: true,
                                                    angle: deg * .pi / 180, size: 520)
@@ -93,7 +92,6 @@ final class AppModel {
                         try? data.write(to: directory.appendingPathComponent("coin-\(id)-\(Int(deg)).png"))
                     }
                 }
-                _ = hello
                 NSApplication.shared.terminate(nil)
             }
         }
@@ -103,23 +101,7 @@ final class AppModel {
     var unlockedCount: Int { engine.state.unlocked.count }
 
     func progress(for id: String) -> Double? { engine.progress(for: id) }
-
-    func progressCaption(for id: String) -> String? {
-        let state = engine.state
-        switch id {
-        case Achievements.firstBlood:
-            return "\(state.totalOutputTokens.formatted()) of \(Achievements.tokenGoal.formatted()) tokens"
-        case Achievements.pleaseThankYou:
-            return "\(state.politenessCount) of \(Achievements.politenessGoal) kind words"
-        case Achievements.multitasker:
-            return "\(state.maxSessionsInADay) of \(Achievements.sessionsInDayGoal) conversations in a day"
-        case Achievements.marathon:
-            let minutes = Int(state.bestMarathonSeconds / 60)
-            return "Best streak \(minutes / 60)h \(minutes % 60)m of 6h"
-        default:
-            return nil
-        }
-    }
+    func progressCaption(for id: String) -> String? { engine.progressCaption(for: id) }
 
     func handle(_ events: [TranscriptEvent]) {
         let unlocks = engine.process(events)
@@ -127,6 +109,18 @@ final class AppModel {
         for unlock in unlocks {
             toasts.show(unlock)
         }
+    }
+
+    /// Counts project directories under ~/.claude/projects for the Project Hopper stats.
+    private func refreshProjectDirs() {
+        let dirs = (try? FileManager.default.contentsOfDirectory(
+            at: monitor.projectsDirectory, includingPropertiesForKeys: [.isDirectoryKey]))?
+            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            .count ?? 0
+        guard dirs != engine.state.projectDirs else { return }
+        let unlocks = engine.updateProjectDirs(dirs)
+        persist()
+        for unlock in unlocks { toasts.show(unlock) }
     }
 
     // MARK: - Dev mode
@@ -159,6 +153,7 @@ final class AppModel {
     private func refreshStatus() {
         status = ClaudeStatus.current(directoryExists: monitor.directoryExists,
                                       lastActivity: monitor.lastActivity)
+        refreshProjectDirs()
     }
 
     private func persist() {

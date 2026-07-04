@@ -7,40 +7,43 @@ struct Unlock: Equatable {
 
 struct EngineState: Codable {
     var installDate: Date = .now
-    /// Achievement id → unlock date.
     var unlocked: [String: Date] = [:]
-
-    // Progress counters.
-    var totalOutputTokens = 0
-    var politenessCount = 0
-    var maxSessionsInADay = 0
-    var bestMarathonSeconds: TimeInterval = 0
-
-    /// Sessions with a user message today (day key → session ids); pruned to the current day.
-    var sessionsByDay: [String: Set<String>] = [:]
-    /// Session id → timestamp of the user message currently awaiting a first response.
-    var awaitingResponse: [String: Date] = [:]
-    /// Session id → current no-gap streak.
-    var marathonRuns: [String: MarathonRun] = [:]
-
-    /// Transcript byte offsets already consumed (file path → offset).
     var fileOffsets: [String: UInt64] = [:]
 
-    struct MarathonRun: Codable {
-        var start: Date
-        var lastEvent: Date
-    }
+    /// Simple additive counters, keyed by `Achievements.s*`.
+    var counters: [String: Int] = [:]
+    var tokens = 0
+    var costCents: Double = 0
+
+    // Distinct-day sets (ordinal day numbers).
+    var nightDays: Set<Int> = []
+    var morningDays: Set<Int> = []
+    var activityDays: Set<Int> = []
+    var lastActivityDay: Int?
+
+    // Weekends: a weekend is "complete" when both its Saturday and Sunday saw activity.
+    var weekendSat: Set<String> = []
+    var weekendSun: Set<String> = []
+
+    var mcpServers: Set<String> = []
+    var projectDirs = 0
+    var maxSimultaneous = 1
+
+    // Deja Vu: session → normalized-block → repeat count.
+    var sessionBlocks: [String: [String: Int]] = [:]
+    // The Refactorer: sessions already counted as deletion-heavy.
+    var refactorCounted: Set<String> = []
+    var sessionEdits: [String: [Int]] = [:]     // session → [added, deleted]
+    // Multitasker: session → last-active time (pruned).
+    var sessionLastActive: [String: Date] = [:]
 }
 
 /// Pure achievement logic: feed it transcript events, get unlocks back.
-/// The caller persists `state` and presents the unlocks.
 @MainActor
 final class AchievementEngine {
     var state: EngineState
 
-    init(state: EngineState = EngineState()) {
-        self.state = state
-    }
+    init(state: EngineState = EngineState()) { self.state = state }
 
     func isUnlocked(_ id: String) -> Bool { state.unlocked[id] != nil }
 
@@ -48,40 +51,88 @@ final class AchievementEngine {
         state.unlocked.keys.compactMap { Achievements.byID($0)?.points }.reduce(0, +)
     }
 
-    /// Fraction toward the goal for locked achievements with meaningful progress.
+    // MARK: - Stats
+
+    /// The current value of every tracked stat.
+    func stats() -> [String: Int] {
+        var s = state.counters
+        s[Achievements.sTokens] = state.tokens
+        s[Achievements.sCostCents] = Int(state.costCents)
+        s[Achievements.sNights] = state.nightDays.count
+        s[Achievements.sMornings] = state.morningDays.count
+        s[Achievements.sStreak] = longestStreak(state.activityDays)
+        s[Achievements.sWeekends] = state.weekendSat.intersection(state.weekendSun).count
+        s[Achievements.sMcpServers] = state.mcpServers.count
+        s[Achievements.sProjectDirs] = state.projectDirs
+        s[Achievements.sMultitasker] = state.maxSimultaneous
+        s[Achievements.sCompletion] = state.unlocked.keys.filter { $0 != Achievements.completionID }.count
+        return s
+    }
+
+    func value(for stat: String) -> Int { stats()[stat] ?? 0 }
+
     func progress(for id: String) -> Double? {
-        switch id {
-        case Achievements.firstBlood:
-            Double(state.totalOutputTokens) / Double(Achievements.tokenGoal)
-        case Achievements.pleaseThankYou:
-            Double(state.politenessCount) / Double(Achievements.politenessGoal)
-        case Achievements.multitasker:
-            Double(state.maxSessionsInADay) / Double(Achievements.sessionsInDayGoal)
-        case Achievements.marathon:
-            state.bestMarathonSeconds / Achievements.marathonGoal
-        default:
-            nil
+        guard let a = Achievements.byID(id), a.goal > 1 else { return nil }
+        let v = value(for: a.stat)
+        guard v > 0 else { return nil }
+        return min(1, Double(v) / Double(a.goal))
+    }
+
+    func progressCaption(for id: String) -> String? {
+        guard let a = Achievements.byID(id) else { return nil }
+        let v = value(for: a.stat)
+        switch a.unit {
+        case .tokens:
+            return "\(v.formatted()) of \(a.goal.formatted()) tokens"
+        case .usdCents:
+            return String(format: "$%.2f of $%d", Double(v) / 100, a.goal / 100)
+        case .days:
+            return "\(v) of \(a.goal)-day streak"
+        case .count:
+            return "\(v.formatted()) of \(a.goal.formatted())"
         }
     }
 
+    // MARK: - Processing
+
     func process(_ events: [TranscriptEvent]) -> [Unlock] {
-        var unlocks: [Unlock] = []
+        var latest = state.installDate
         for event in events where event.timestamp >= state.installDate {
-            trackMarathon(event, unlocks: &unlocks)
+            latest = max(latest, event.timestamp)
+            trackTimestamp(event.timestamp, session: event.sessionID)
             switch event {
-            case .userMessage(let text, let timestamp, let sessionID):
-                trackUserMessage(text: text, timestamp: timestamp, sessionID: sessionID, unlocks: &unlocks)
-            case .assistantMessage(let outputTokens, let timestamp, let sessionID):
-                trackAssistantMessage(outputTokens: outputTokens, timestamp: timestamp,
-                                      sessionID: sessionID, unlocks: &unlocks)
+            case .user(let text, _, let session):
+                state.counters[Achievements.sFirstContact] = 1
+                trackUserText(text, session: session)
+            case .assistant(let usage, let model, _, _):
+                state.tokens += usage.total
+                state.costCents += Pricing.cents(for: usage, model: model)
+            case .toolUse(let name, let input, _, let session):
+                trackToolUse(name: name, input: input, session: session)
+            case .toolResult(let isError, _, _):
+                if !isError { bump(Achievements.sApprovals) }
+            case .slashCommand(let name, _, _):
+                trackSlash(name)
+            case .interrupted:
+                bump(Achievements.sInterruptions)
             case .activity:
                 break
+            }
+        }
+        return checkUnlocks(at: latest)
+    }
+
+    private func checkUnlocks(at date: Date) -> [Unlock] {
+        let current = stats()
+        var unlocks: [Unlock] = []
+        for achievement in Achievements.all where state.unlocked[achievement.id] == nil {
+            if current[achievement.stat, default: 0] >= achievement.goal {
+                if let unlock = unlock(achievement.id, at: date) { unlocks.append(unlock) }
             }
         }
         return unlocks
     }
 
-    /// Directly award an achievement (dev mode).
     @discardableResult
     func unlock(_ id: String, at date: Date = .now) -> Unlock? {
         guard state.unlocked[id] == nil, let achievement = Achievements.byID(id) else { return nil }
@@ -91,96 +142,150 @@ final class AchievementEngine {
 
     func reset() {
         let offsets = state.fileOffsets
+        let dirs = state.projectDirs
         state = EngineState()
         state.fileOffsets = offsets
+        state.projectDirs = dirs
     }
 
-    // MARK: - Rules
+    /// Called by the app when the project-dir count changes.
+    func updateProjectDirs(_ count: Int) -> [Unlock] {
+        state.projectDirs = count
+        return checkUnlocks(at: .now)
+    }
 
-    private func trackUserMessage(text: String, timestamp: Date, sessionID: String, unlocks: inout [Unlock]) {
-        award(Achievements.helloClaude, at: timestamp, unlocks: &unlocks)
+    // MARK: - Trackers
 
-        let hour = Calendar.current.component(.hour, from: timestamp)
-        if hour < 5 {
-            award(Achievements.nightOwl, at: timestamp, unlocks: &unlocks)
+    private func trackTimestamp(_ ts: Date, session: String) {
+        let day = Self.dayOrdinal(ts)
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: ts)
+
+        if hour < 5 { state.nightDays.insert(day) }
+        if hour >= 5, hour < 7 { state.morningDays.insert(day) }
+        state.activityDays.insert(day)
+
+        let weekday = calendar.component(.weekday, from: ts)   // 1=Sun … 7=Sat
+        let weekID = weekendID(ts, calendar: calendar)
+        if weekday == 7 { state.weekendSat.insert(weekID) }
+        if weekday == 1 { state.weekendSun.insert(weekID) }
+
+        let comps = calendar.dateComponents([.month, .day], from: ts)
+        if (comps.month == 12 && comps.day == 25) || (comps.month == 1 && comps.day == 1) {
+            state.counters[Achievements.sHoliday] = 1
         }
 
-        if !isUnlocked(Achievements.pleaseThankYou) {
-            state.politenessCount += occurrences(in: text, of: ["please", "thank you"])
-            if state.politenessCount >= Achievements.politenessGoal {
-                award(Achievements.pleaseThankYou, at: timestamp, unlocks: &unlocks)
+        if let last = state.lastActivityDay, day - last >= 30 {
+            state.counters[Achievements.sOldFriend] = 1
+        }
+        state.lastActivityDay = max(state.lastActivityDay ?? day, day)
+
+        // Simultaneous sessions: how many sessions were active within the last 90s.
+        state.sessionLastActive[session] = ts
+        state.sessionLastActive = state.sessionLastActive.filter { ts.timeIntervalSince($0.value) < 90 }
+        state.maxSimultaneous = max(state.maxSimultaneous, state.sessionLastActive.count)
+    }
+
+    private func trackUserText(_ text: String, session: String) {
+        let lower = text.lowercased()
+        add(Achievements.sPoliteness, occurrences(in: lower, of: ["please", "thank you"]))
+        add(Achievements.sSorry, occurrences(in: lower, of: ["sorry"]))
+        add(Achievements.sProfanity, occurrences(in: lower, of: ["fuck"]))
+        add(Achievements.sExorcist, occurrences(in: lower, of: ["why did you do that"]))
+        if lower.contains("you were right") { state.counters[Achievements.sGaslighter] = 1 }
+        if lower.contains("make no mistakes") { state.counters[Achievements.sFeelingLucky] = 1 }
+        if lower.contains("remove claude") || lower.contains("co-authored") || lower.contains("contributor") {
+            state.counters[Achievements.sErased] = 1
+        }
+        if lower.contains(".claude/projects") || lower.contains(".jsonl") {
+            state.counters[Achievements.sInception] = 1
+        }
+        if text.split(whereSeparator: \.isWhitespace).count < 5 { bump(Achievements.sShortPrompts) }
+
+        // Deja Vu — same block pasted 5× in a session.
+        let key = String(lower.trimmingCharacters(in: .whitespacesAndNewlines).prefix(2000))
+        guard !key.isEmpty else { return }
+        state.sessionBlocks[session, default: [:]][key, default: 0] += 1
+        if state.sessionBlocks[session]?[key] ?? 0 >= 5 { state.counters[Achievements.sDejaVu] = 1 }
+    }
+
+    private func trackToolUse(name: String, input: String, session: String) {
+        if name.hasPrefix("mcp__") {
+            state.counters[Achievements.sMcpAny] = 1
+            let parts = name.split(separator: "_", omittingEmptySubsequences: true)
+            if let server = parts.first { state.mcpServers.insert(String(server)) }
+        }
+        if name == "Bash", input.contains("git commit") { bump(Achievements.sGitCommits) }
+
+        if name == "Edit" || name == "Write" || name == "MultiEdit" {
+            let (added, deleted) = editDelta(name: name, input: input)
+            var totals = state.sessionEdits[session] ?? [0, 0]
+            totals[0] += added
+            totals[1] += deleted
+            state.sessionEdits[session] = totals
+            if totals[1] > totals[0], !state.refactorCounted.contains(session) {
+                state.refactorCounted.insert(session)
+                bump(Achievements.sRefactor)
             }
         }
-
-        let dayKey = Self.dayKey(for: timestamp)
-        state.sessionsByDay = state.sessionsByDay.filter { $0.key == dayKey }
-        state.sessionsByDay[dayKey, default: []].insert(sessionID)
-        let todayCount = state.sessionsByDay[dayKey]?.count ?? 0
-        state.maxSessionsInADay = max(state.maxSessionsInADay, todayCount)
-        if todayCount >= Achievements.sessionsInDayGoal {
-            award(Achievements.multitasker, at: timestamp, unlocks: &unlocks)
-        }
-
-        state.awaitingResponse[sessionID] = timestamp
     }
 
-    private func trackAssistantMessage(outputTokens: Int, timestamp: Date, sessionID: String,
-                                       unlocks: inout [Unlock]) {
-        state.totalOutputTokens += outputTokens
-        if state.totalOutputTokens >= Achievements.tokenGoal {
-            award(Achievements.firstBlood, at: timestamp, unlocks: &unlocks)
-        }
-
-        if let asked = state.awaitingResponse.removeValue(forKey: sessionID),
-           timestamp.timeIntervalSince(asked) >= Achievements.waitGoal {
-            award(Achievements.homunculus, at: timestamp, unlocks: &unlocks)
-        }
+    private func trackSlash(_ name: String) {
+        let n = name.lowercased()
+        if n.hasPrefix("doctor") { bump(Achievements.sDoctor) }
+        if n.hasPrefix("feedback") { bump(Achievements.sFeedback) }
+        if n.hasPrefix("fast") { state.counters[Achievements.sFast] = 1 }
+        if n.hasPrefix("radio") { state.counters[Achievements.sRadio] = 1 }
+        if n.contains("karpathy") { state.counters[Achievements.sKarpathy] = 1 }
     }
 
-    private func trackMarathon(_ event: TranscriptEvent, unlocks: inout [Unlock]) {
-        let sessionID = event.sessionID
-        let timestamp = event.timestamp
-        var run = state.marathonRuns[sessionID] ?? .init(start: timestamp, lastEvent: timestamp)
-        if timestamp.timeIntervalSince(run.lastEvent) > Achievements.marathonMaxGap {
-            run = .init(start: timestamp, lastEvent: timestamp)
-        } else {
-            run.lastEvent = timestamp
-        }
-        state.marathonRuns[sessionID] = run
+    // MARK: - Helpers
 
-        let span = run.lastEvent.timeIntervalSince(run.start)
-        state.bestMarathonSeconds = max(state.bestMarathonSeconds, span)
-        if span >= Achievements.marathonGoal {
-            award(Achievements.marathon, at: timestamp, unlocks: &unlocks)
-        }
+    private func bump(_ key: String) { state.counters[key, default: 0] += 1 }
+    private func add(_ key: String, _ n: Int) { if n > 0 { state.counters[key, default: 0] += n } }
 
-        // Drop streaks that ended long ago so state stays small.
-        state.marathonRuns = state.marathonRuns.filter {
-            timestamp.timeIntervalSince($0.value.lastEvent) < 3600
-        }
+    private func editDelta(name: String, input: String) -> (added: Int, deleted: Int) {
+        guard let data = input.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return (0, 0) }
+        func lines(_ s: String?) -> Int { s.map { $0.split(separator: "\n", omittingEmptySubsequences: false).count } ?? 0 }
+        if name == "Write" { return (lines(dict["content"] as? String), 0) }
+        return (lines(dict["new_string"] as? String), lines(dict["old_string"] as? String))
     }
 
-    private func award(_ id: String, at date: Date, unlocks: inout [Unlock]) {
-        if let unlock = unlock(id, at: date) {
-            unlocks.append(unlock)
-        }
-    }
-
-    private func occurrences(in text: String, of phrases: [String]) -> Int {
-        let lowered = text.lowercased()
+    private func occurrences(in lowered: String, of phrases: [String]) -> Int {
         var count = 0
         for phrase in phrases {
-            var searchRange = lowered.startIndex..<lowered.endIndex
-            while let found = lowered.range(of: phrase, range: searchRange) {
+            var range = lowered.startIndex..<lowered.endIndex
+            while let found = lowered.range(of: phrase, range: range) {
                 count += 1
-                searchRange = found.upperBound..<lowered.endIndex
+                range = found.upperBound..<lowered.endIndex
             }
         }
         return count
     }
 
-    static func dayKey(for date: Date) -> String {
-        let parts = Calendar.current.dateComponents([.year, .month, .day], from: date)
-        return "\(parts.year!)-\(parts.month!)-\(parts.day!)"
+    private func longestStreak(_ days: Set<Int>) -> Int {
+        guard !days.isEmpty else { return 0 }
+        let sorted = days.sorted()
+        var best = 1, run = 1
+        for i in 1..<sorted.count {
+            if sorted[i] == sorted[i - 1] + 1 { run += 1; best = max(best, run) }
+            else { run = 1 }
+        }
+        return best
+    }
+
+    private func weekendID(_ ts: Date, calendar: Calendar) -> String {
+        let c = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: ts)
+        return "\(c.yearForWeekOfYear ?? 0)-\(c.weekOfYear ?? 0)"
+    }
+
+    private static let referenceDay = Calendar.current.startOfDay(
+        for: Date(timeIntervalSinceReferenceDate: 0))
+
+    static func dayOrdinal(_ ts: Date) -> Int {
+        let start = Calendar.current.startOfDay(for: ts)
+        return Calendar.current.dateComponents([.day], from: referenceDay, to: start).day ?? 0
     }
 }

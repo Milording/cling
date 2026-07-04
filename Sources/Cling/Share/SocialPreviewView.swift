@@ -4,11 +4,11 @@ import SwiftUI
 /// Uses the app's own medal badges so the image stays on-brand.
 struct SocialPreviewView: View {
     private let showcase: [(id: String, unlocked: Bool)] = [
-        (Achievements.helloClaude, true),
-        (Achievements.nightOwl, true),
-        (Achievements.multitasker, true),
-        (Achievements.homunculus, false),
-        (Achievements.marathon, true),
+        ("first-contact", true),
+        ("night-owl-1", true),
+        ("multitasker", true),
+        ("daily-driver-4", false),
+        ("git-gud-3", true),
     ]
 
     var body: some View {

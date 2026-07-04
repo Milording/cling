@@ -12,10 +12,14 @@ struct AchievementDetailView: View {
     @AppStorage("useRealityKit") private var useRealityKit = false
 
     private var unlocked: Bool { unlockDate != nil }
+    private var masked: Bool { achievement.hidden && !unlocked }
 
     @ViewBuilder
     private var medal: some View {
-        if useRealityKit, #available(macOS 15.0, *) {
+        if masked {
+            AchievementBadge(achievement: achievement, unlocked: false, size: 150, hiddenLocked: true)
+                .frame(width: 210, height: 210)
+        } else if useRealityKit, #available(macOS 15.0, *) {
             CoinMedalRealityView(achievement: achievement, unlocked: unlocked)
                 .frame(width: 210, height: 210)
         } else {
@@ -43,12 +47,13 @@ struct AchievementDetailView: View {
 
             medal
 
-            Text(achievement.name)
+            Text(masked ? "???" : achievement.name)
                 .font(.system(size: 24, weight: .bold, design: .rounded))
                 .multilineTextAlignment(.center)
                 .padding(.top, 26)
 
-            Text(achievement.blurb)
+            Text(masked ? "A hidden achievement. Keep using Claude Code to discover it."
+                        : achievement.blurb)
                 .font(.system(size: 15))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
