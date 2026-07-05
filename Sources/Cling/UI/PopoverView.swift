@@ -1,10 +1,16 @@
 import SwiftUI
 
+enum PopoverTab: String, CaseIterable {
+    case achievements = "Achievements"
+    case statistics = "Statistics"
+}
+
 struct PopoverView: View {
     @Environment(AppModel.self) private var model
     @State private var showSettings = false
     @State private var showDev = false
     @State private var selected: Achievement?
+    @State private var tab: PopoverTab = .achievements
 
     /// When true, the achievement grid is drawn without a `ScrollView` so the
     /// whole popover renders in a single `ImageRenderer` pass (for screenshots).
@@ -21,11 +27,17 @@ struct PopoverView: View {
                 } else if showDev {
                     DevModeView()
                 } else {
-                    summary
-                    if staticRender {
-                        AchievementGrid()
+                    tabSwitcher
+                    if tab == .achievements {
+                        summary
+                        if staticRender {
+                            AchievementGrid()
+                        } else {
+                            achievementList
+                        }
                     } else {
-                        achievementList
+                        StatsView()
+                        Spacer(minLength: 0)
                     }
                 }
                 Divider()
@@ -68,6 +80,32 @@ struct PopoverView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+
+    private var tabSwitcher: some View {
+        HStack(spacing: 4) {
+            ForEach(PopoverTab.allCases, id: \.self) { item in
+                let selected = tab == item
+                Text(item.rawValue)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(selected ? .white : Color.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background {
+                        if selected {
+                            RoundedRectangle(cornerRadius: 7).fill(Theme.accent)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.15)) { tab = item }
+                    }
+            }
+        }
+        .padding(3)
+        .background(RoundedRectangle(cornerRadius: 9).fill(.quaternary.opacity(0.6)))
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
     }
 
     private var summary: some View {

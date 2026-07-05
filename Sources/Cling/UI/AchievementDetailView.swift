@@ -10,7 +10,6 @@ struct AchievementDetailView: View {
 
     @Environment(AppModel.self) private var model
     @State private var orientation: ShareCardLayout = .horizontal
-    @State private var thumbnails: [ShareCardLayout: NSImage] = [:]
     @AppStorage("useRealityKit") private var useRealityKit = false
     /// Replaces the ScrollView + live coin with static equivalents for screenshots.
     var staticRender = false
@@ -36,7 +35,6 @@ struct AchievementDetailView: View {
             .padding(12)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .task { await loadThumbnails() }
     }
 
     @ViewBuilder
@@ -136,7 +134,7 @@ struct AchievementDetailView: View {
 
     private var shareControls: some View {
         VStack(spacing: 14) {
-            HStack(alignment: .bottom, spacing: 16) {
+            HStack(spacing: 12) {
                 ForEach(ShareCardLayout.allCases) { layout in tile(layout) }
             }
             HStack(spacing: 20) {
@@ -155,24 +153,17 @@ struct AchievementDetailView: View {
 
     private func tile(_ layout: ShareCardLayout) -> some View {
         let selected = orientation == layout
-        // Size each tile to the card's own aspect ratio so the full card shows,
-        // uncropped, at a common height. (Height capped so the wide horizontal
-        // tile and the narrow vertical tile both fit the popover width.)
-        let height: CGFloat = 118
-        let width = height * (layout.size.width / layout.size.height)
-        return VStack(spacing: 7) {
-            Group {
-                if let image = thumbnails[layout] {
-                    Image(nsImage: image).resizable().scaledToFit()
-                } else {
-                    Rectangle().fill(.quaternary.opacity(0.5))
-                }
-            }
-            .frame(width: width, height: height)
-            .clipShape(RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(
-                selected ? Theme.accent : Color.secondary.opacity(0.25),
-                lineWidth: selected ? 2.5 : 1))
+        return VStack(spacing: 8) {
+            Image(systemName: layout.icon)
+                .font(.system(size: 28, weight: .regular))
+                .foregroundStyle(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
+                .frame(maxWidth: .infinity)
+                .frame(height: 62)
+                .background(RoundedRectangle(cornerRadius: 12)
+                    .fill(selected ? Theme.accent.opacity(0.12) : Color.secondary.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(
+                    selected ? Theme.accent : Color.secondary.opacity(0.2),
+                    lineWidth: selected ? 2 : 1))
             Text(layout.label)
                 .font(.caption)
                 .foregroundStyle(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
@@ -213,15 +204,5 @@ struct AchievementDetailView: View {
     private func pngData() -> Data? {
         guard let date = unlockDate else { return nil }
         return ShareCardRenderer.pngData(for: achievement, unlockDate: date, layout: orientation)
-    }
-
-    private func loadThumbnails() async {
-        guard let date = unlockDate else { return }
-        for layout in ShareCardLayout.allCases where thumbnails[layout] == nil {
-            if let data = ShareCardRenderer.pngData(for: achievement, unlockDate: date, layout: layout),
-               let image = NSImage(data: data) {
-                thumbnails[layout] = image
-            }
-        }
     }
 }

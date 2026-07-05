@@ -21,6 +21,14 @@ enum ShareCardLayout: String, CaseIterable, Identifiable {
         case .horizontal: "Horizontal"
         }
     }
+
+    /// SF Symbol representing the card's orientation.
+    var icon: String {
+        switch self {
+        case .vertical: "rectangle.portrait"
+        case .horizontal: "rectangle"
+        }
+    }
 }
 
 /// Social share image, rendered off-screen at full pixel size.

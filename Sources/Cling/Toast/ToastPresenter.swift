@@ -19,6 +19,9 @@ final class ToastPresenter {
     private var queue: [Item] = []
     private var panel: NSPanel?
 
+    /// Called when the user clicks an unlock toast (to open it in the app).
+    var onSelect: ((Unlock) -> Void)?
+
     func show(_ unlock: Unlock) {
         queue.append(.unlock(unlock))
         presentNextIfIdle()
@@ -48,7 +51,13 @@ final class ToastPresenter {
         let dismiss: () -> Void = { [weak self] in self?.dismiss() }
         switch item {
         case .unlock(let unlock):
-            panel.contentView = NSHostingView(rootView: ToastView(unlock: unlock, onDone: dismiss))
+            let select: () -> Void = { [weak self] in
+                guard let self else { return }
+                self.dismiss()
+                self.onSelect?(unlock)
+            }
+            panel.contentView = NSHostingView(
+                rootView: ToastView(unlock: unlock, onSelect: select, onDone: dismiss))
             if UserDefaults.standard.object(forKey: "soundEnabled") as? Bool ?? true {
                 sounds.play(unlock.achievement.sound)
             }

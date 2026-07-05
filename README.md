@@ -32,7 +32,7 @@ unlock with an Xbox 360–style toast — including a sound effect — in the co
 Tap any medal to flip it into a **real 3D coin** — spin it with your mouse, icon on the front, points on the back:
 
 <div align="center">
-<img src="assets/coin.png" width="240" alt="Spinnable 3D coin medal">
+<img src="assets/coin.gif" width="240" alt="Spinnable 3D coin medal">
 </div>
 
 ## 🎮 Features

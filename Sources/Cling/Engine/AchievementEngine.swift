@@ -36,6 +36,10 @@ struct EngineState: Codable {
     var sessionEdits: [String: [Int]] = [:]     // session → [added, deleted]
     // Multitasker: session → last-active time (pruned).
     var sessionLastActive: [String: Date] = [:]
+
+    // Activity by hour-of-day (0…23), for the "most active" statistic.
+    // Optional so decoding older saved state (without this key) still succeeds.
+    var hourCounts: [Int]?
 }
 
 /// Pure achievement logic: feed it transcript events, get unlocks back.
@@ -82,6 +86,19 @@ final class AchievementEngine {
             day -= 1
         }
         return streak
+    }
+
+    /// The peak 2-hour activity window (e.g. "11PM–1AM"), or nil if there's no data yet.
+    func mostActiveWindow() -> String? {
+        guard let counts = state.hourCounts, let peak = counts.indices.max(by: { counts[$0] < counts[$1] }),
+              counts[peak] > 0 else { return nil }
+        func label(_ h: Int) -> String {
+            let hour = ((h % 24) + 24) % 24
+            let period = hour < 12 ? "AM" : "PM"
+            let twelve = hour % 12 == 0 ? 12 : hour % 12
+            return "\(twelve)\(period)"
+        }
+        return "\(label(peak))–\(label(peak + 2))"
     }
 
     func progress(for id: String) -> Double? {
@@ -177,6 +194,9 @@ final class AchievementEngine {
         if hour < 5 { state.nightDays.insert(day) }
         if hour >= 5, hour < 7 { state.morningDays.insert(day) }
         state.activityDays.insert(day)
+
+        if state.hourCounts == nil { state.hourCounts = Array(repeating: 0, count: 24) }
+        state.hourCounts?[hour] += 1
 
         let weekday = calendar.component(.weekday, from: ts)   // 1=Sun … 7=Sat
         let weekID = weekendID(ts, calendar: calendar)

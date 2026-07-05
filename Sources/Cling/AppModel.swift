@@ -32,6 +32,7 @@ final class AppModel {
             persist()
         }
         monitor.onEvents = { [weak self] events in self?.handle(events) }
+        toasts.onSelect = { [weak self] unlock in self?.showDetail(for: unlock) }
         monitor.start()
 
         let timer = Timer(timeInterval: 5, repeats: true) { _ in
@@ -62,6 +63,16 @@ final class AppModel {
             }
         }
 
+        // Renders a rotating coin medal to an animated GIF and exits (for the README).
+        if let flagIndex = arguments.firstIndex(of: "--render-coin-gif"), arguments.count > flagIndex + 1 {
+            let url = URL(fileURLWithPath: arguments[flagIndex + 1])
+            Task { @MainActor in
+                monitor.stop()
+                renderCoinGIF(Achievements.byID("millionaire-3")!, to: url)
+                NSApplication.shared.terminate(nil)
+            }
+        }
+
         // Renders share cards to a directory and exits; used for design review from the CLI.
         if let flagIndex = arguments.firstIndex(of: "--render-cards"), arguments.count > flagIndex + 1 {
             let directory = URL(fileURLWithPath: arguments[flagIndex + 1])
@@ -84,6 +95,9 @@ final class AppModel {
                 engine.unlock("multitasker")
                 let today = AchievementEngine.dayOrdinal(.now)
                 engine.state.activityDays = [today, today - 1, today - 2]
+                engine.state.tokens = 47_200_000
+                engine.state.costCents = 18_640
+                engine.state.hourCounts = { var h = Array(repeating: 2, count: 24); h[23] = 40; return h }()
                 stateVersion += 1
                 func preview(_ scheme: ColorScheme) -> some View {
                     PopoverView(staticRender: true)
@@ -93,6 +107,15 @@ final class AppModel {
                 }
                 render(preview(.light), scale: 2, to: directory.appendingPathComponent("popover-light.png"))
                 render(preview(.dark), scale: 2, to: directory.appendingPathComponent("popover-dark.png"))
+                func stats(_ scheme: ColorScheme) -> some View {
+                    StatsView()
+                        .frame(width: 360)
+                        .background(Color(nsColor: .windowBackgroundColor))
+                        .environment(\.colorScheme, scheme)
+                        .environment(self)
+                }
+                render(stats(.light), scale: 2, to: directory.appendingPathComponent("stats-light.png"))
+                render(stats(.dark), scale: 2, to: directory.appendingPathComponent("stats-dark.png"))
                 render(SocialPreviewView(), scale: 1, to: directory.appendingPathComponent("social-preview.png"))
 
                 // Coin medal snapshots at a few rotations (SceneKit, offscreen).
@@ -131,6 +154,13 @@ final class AppModel {
     var completionFraction: Double { Double(unlockedCount) / Double(totalAchievements) }
     var completionPercent: Int { Int((completionFraction * 100).rounded()) }
     var currentStreak: Int { engine.currentStreak() }
+
+    // MARK: - Statistics (Statistics tab)
+
+    var statTokens: Int { engine.state.tokens }
+    var statCostDollars: Double { engine.state.costCents / 100 }
+    var statLongestStreak: Int { engine.value(for: Achievements.sStreak) }
+    var statMostActive: String? { engine.mostActiveWindow() }
 
     /// True while a full-history recalculation is running.
     private(set) var isRecalculating = false
@@ -191,6 +221,38 @@ final class AppModel {
         let unlocks = engine.updateProjectDirs(dirs)
         persist()
         for unlock in unlocks { toasts.show(unlock) }
+    }
+
+    // MARK: - Detail window
+
+    private var detailWindow: NSWindow?
+
+    /// Opens the app and shows a tapped unlock toast's achievement in its own window.
+    func showDetail(for unlock: Unlock) {
+        NSApp.activate(ignoringOtherApps: true)
+        let date = engine.state.unlocked[unlock.achievement.id] ?? unlock.date
+        let view = AchievementDetailView(
+            achievement: unlock.achievement, unlockDate: date,
+            onClose: { [weak self] in self?.detailWindow?.close() })
+            .environment(self)
+            .frame(width: 360, height: 560)
+
+        let window = detailWindow ?? {
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 360, height: 560),
+                styleMask: [.titled, .closable, .fullSizeContentView],
+                backing: .buffered, defer: false)
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.isMovableByWindowBackground = true
+            window.isReleasedWhenClosed = false
+            window.level = .floating
+            detailWindow = window
+            return window
+        }()
+        window.contentView = NSHostingView(rootView: view)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - Dev mode
@@ -256,23 +318,46 @@ final class AppModel {
         // 6. Empty beat before the loop restarts.
         frames.append(Frame(scale: 0.3, opacity: 0, reveal: 0, delay: 0.7))
 
-        guard let dest = CGImageDestinationCreateWithURL(
-            url as CFURL, UTType.gif.identifier as CFString, frames.count,
-            [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary
-        ) else { return }
-
+        var images: [(image: CGImage, delay: Double)] = []
         for frame in frames {
             let view = ToastGIFFrame(unlock: unlock, scale: frame.scale,
                                      opacity: frame.opacity, reveal: frame.reveal)
                 .frame(width: canvas.width, height: canvas.height)
             let renderer = ImageRenderer(content: view)
             renderer.scale = 2
-            guard let cgImage = renderer.cgImage else { continue }
+            if let cgImage = renderer.cgImage { images.append((cgImage, frame.delay)) }
+        }
+        writeGIF(images, to: url)
+    }
+
+    /// Renders a full 360° rotation of a coin medal as a looping GIF.
+    private func renderCoinGIF(_ achievement: Achievement, to url: URL) {
+        let frameCount = 40
+        let delay = 0.05
+        var images: [(image: CGImage, delay: Double)] = []
+        for i in 0..<frameCount {
+            let angle = 2 * Double.pi * Double(i) / Double(frameCount)
+            let snapshot = CoinMedal.snapshot(achievement: achievement, unlocked: true,
+                                              angle: angle, size: 420, backText: "Jul 5, 2026")
+            if let cgImage = snapshot.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                images.append((cgImage, delay))
+            }
+        }
+        writeGIF(images, to: url)
+    }
+
+    /// Encodes a sequence of frames into an infinitely-looping GIF at `url`.
+    private func writeGIF(_ frames: [(image: CGImage, delay: Double)], to url: URL) {
+        guard let dest = CGImageDestinationCreateWithURL(
+            url as CFURL, UTType.gif.identifier as CFString, frames.count,
+            [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary
+        ) else { return }
+        for frame in frames {
             let properties = [kCGImagePropertyGIFDictionary: [
                 kCGImagePropertyGIFDelayTime: frame.delay,
                 kCGImagePropertyGIFUnclampedDelayTime: frame.delay,
             ]] as CFDictionary
-            CGImageDestinationAddImage(dest, cgImage, properties)
+            CGImageDestinationAddImage(dest, frame.image, properties)
         }
         CGImageDestinationFinalize(dest)
     }

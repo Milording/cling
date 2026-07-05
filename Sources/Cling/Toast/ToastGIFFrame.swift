@@ -13,37 +13,32 @@ struct ToastGIFFrame: View {
     var reveal: CGFloat
 
     /// Natural width of the text region once fully revealed.
-    private let textWidth: CGFloat = 250
+    private let textWidth: CGFloat = 214
 
     var body: some View {
         HStack(spacing: 14) {
             AchievementBadge(achievement: unlock.achievement, unlocked: true, size: 58)
 
             if reveal > 0.001 {
-                HStack(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Achievement unlocked")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack(spacing: 8) {
-                            Text(unlock.achievement.name)
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundStyle(.primary)
-                            Text("+\(unlock.achievement.points)P")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .foregroundStyle(Theme.accent)
-                        }
-                    }
-                    Image(systemName: "square.and.arrow.up")
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Achievement unlocked")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                        .frame(width: 26, height: 26)
+                    HStack(spacing: 8) {
+                        Text(unlock.achievement.name)
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                        Text("+\(unlock.achievement.points)P")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.accent)
+                    }
                 }
                 .lineLimit(1)
                 .fixedSize()
                 .frame(width: textWidth * reveal, alignment: .leading)
                 .opacity(Double(min(1, reveal * 1.4)))
                 .clipped()
-                .padding(.trailing, 10 * reveal)
+                .padding(.trailing, 16 * reveal)
             }
         }
         .padding(7)
