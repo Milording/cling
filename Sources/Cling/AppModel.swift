@@ -113,6 +113,33 @@ final class AppModel {
     var completionPercent: Int { Int((completionFraction * 100).rounded()) }
     var currentStreak: Int { engine.currentStreak() }
 
+    /// True while a full-history recalculation is running.
+    private(set) var isRecalculating = false
+
+    /// Rebuilds all progress by replaying every local transcript from the beginning.
+    /// Unlocks are applied silently (no toast flood) since this is a bulk backfill.
+    func recalculateFromLogs() {
+        guard !isRecalculating else { return }
+        isRecalculating = true
+        monitor.stop()
+        let directory = monitor.projectsDirectory
+        Task {
+            let result = await Task.detached {
+                TranscriptMonitor.scanAll(projectsDirectory: directory)
+            }.value
+
+            engine.reset()
+            engine.state.installDate = .distantPast    // count the full history
+            _ = engine.process(result.events)          // ignore unlocks — silent backfill
+            monitor.offsets = result.offsets
+            refreshProjectDirs()
+            persist()
+
+            isRecalculating = false
+            monitor.start()                            // resume live tailing
+        }
+    }
+
     func progress(for id: String) -> Double? { engine.progress(for: id) }
     func progressCaption(for id: String) -> String? { engine.progressCaption(for: id) }
 

@@ -15,6 +15,37 @@ struct SettingsView: View {
         @Bindable var model = model
         Form {
             Section {
+                LabeledContent("Connection") {
+                    HStack(spacing: 6) {
+                        Circle().fill(model.status.color).frame(width: 8, height: 8)
+                        Text(model.status.label).foregroundStyle(.secondary)
+                    }
+                }
+                LabeledContent("Progress") {
+                    Button {
+                        model.recalculateFromLogs()
+                    } label: {
+                        if model.isRecalculating {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text("Recalculating\u{2026}")
+                            }
+                        } else {
+                            Text("Recalculate from logs")
+                        }
+                    }
+                    .disabled(model.isRecalculating)
+                }
+            } header: {
+                Text("Claude Code")
+            } footer: {
+                Text("Rebuild all achievement progress by replaying your full local Claude Code history. Normally only activity since Cling was installed is counted.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+            }
+
+            Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .disabled(!isBundled)
                     .onChange(of: launchAtLogin) { _, newValue in

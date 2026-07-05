@@ -50,15 +50,10 @@ struct PopoverView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Circle()
-                .fill(model.status.color)
-                .frame(width: 8, height: 8)
-                .shadow(color: model.status.color.opacity(0.7), radius: 3)
-            Text("Claude Code")
+            LucideText(icon: .trophy, size: 15)
+                .foregroundStyle(Theme.accent)
+            Text("Cling")
                 .font(.system(size: 13, weight: .semibold))
-            Text(model.status.label)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
             Spacer()
             Button {
                 showSettings.toggle()

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Token usage from an assistant entry's `message.usage`.
-struct Usage: Equatable {
+struct Usage: Equatable, Sendable {
     var input = 0
     var output = 0
     var cacheCreate = 0
@@ -11,7 +11,7 @@ struct Usage: Equatable {
 
 /// A single relevant occurrence extracted from a Claude Code transcript line.
 /// One JSONL line may yield several events (an assistant reply plus its tool calls).
-enum TranscriptEvent: Equatable {
+enum TranscriptEvent: Equatable, Sendable {
     case user(text: String, timestamp: Date, sessionID: String)
     case assistant(usage: Usage, model: String?, timestamp: Date, sessionID: String)
     case toolUse(name: String, input: String, timestamp: Date, sessionID: String)

@@ -131,6 +131,18 @@ final class AchievementEngineTests: XCTestCase {
         XCTAssertTrue(unlockedIDs(unlocks).contains("project-hopper-1"))
     }
 
+    func testFullScanCountsHistoryBeforeInstall() {
+        // Simulates "recalculate from logs": installDate in the past so all history counts.
+        engine.state.installDate = .distantPast
+        let unlocks = engine.process([
+            .user(text: "hi", timestamp: date(hour: 12), sessionID: "s"),
+            .assistant(usage: Usage(input: 0, output: 1_000_000), model: "claude-sonnet-4",
+                       timestamp: date(hour: 12), sessionID: "s"),
+        ])
+        XCTAssertTrue(unlockedIDs(unlocks).contains("first-contact"))
+        XCTAssertTrue(unlockedIDs(unlocks).contains("millionaire-1"))
+    }
+
     func testEventsBeforeInstallIgnored() {
         engine.state.installDate = date(hour: 12)
         let unlocks = engine.process([.user(text: "old", timestamp: date(hour: 11), sessionID: "s")])

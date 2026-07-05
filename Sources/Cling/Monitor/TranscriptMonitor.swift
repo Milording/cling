@@ -28,6 +28,33 @@ final class TranscriptMonitor {
         }
     }
 
+    /// Reads every transcript from the beginning and returns all events (chronological)
+    /// plus the byte offset consumed per file. Runs off the main actor; used to
+    /// recalculate progress from the full local history.
+    nonisolated static func scanAll(projectsDirectory: URL)
+        -> (events: [TranscriptEvent], offsets: [String: UInt64]) {
+        let fm = FileManager.default
+        var events: [TranscriptEvent] = []
+        var offsets: [String: UInt64] = [:]
+
+        let projects = (try? fm.contentsOfDirectory(at: projectsDirectory,
+                                                    includingPropertiesForKeys: nil)) ?? []
+        for project in projects {
+            let files = (try? fm.contentsOfDirectory(at: project, includingPropertiesForKeys: nil))?
+                .filter { $0.pathExtension == "jsonl" } ?? []
+            for url in files {
+                guard let data = try? Data(contentsOf: url),
+                      let text = String(data: data, encoding: .utf8) else { continue }
+                offsets[url.path] = UInt64(data.count)
+                for line in text.split(separator: "\n") {
+                    events.append(contentsOf: JSONLParser.parse(line: String(line)))
+                }
+            }
+        }
+        events.sort { $0.timestamp < $1.timestamp }
+        return (events, offsets)
+    }
+
     func start(interval: TimeInterval = 2) {
         stop()
         let timer = Timer(timeInterval: interval, repeats: true) { _ in
