@@ -37,7 +37,7 @@ struct AchievementCell: View {
                 .frame(height: 22)
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .help(achievement.blurb)
+        .help(masked ? "" : achievement.blurb)
     }
 
     @ViewBuilder

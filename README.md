@@ -26,7 +26,7 @@ Claude Code transcripts, tracks your progress toward a set of achievements, and 
 unlock with an Xbox 360–style toast — including a sound effect — in the corner of your screen.
 
 <div align="center">
-<img src="assets/toast.png" width="520" alt="Achievement unlocked toast">
+<img src="assets/toast.gif" width="560" alt="Achievement unlocked toast animation">
 </div>
 
 Tap any medal to flip it into a **real 3D coin** — spin it with your mouse, icon on the front, points on the back:

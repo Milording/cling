@@ -10,18 +10,29 @@ final class ToastPanel: NSPanel {
 /// of the main screen. Unlocks queue and play sequentially; hover pins them open.
 @MainActor
 final class ToastPresenter {
+    private enum Item {
+        case unlock(Unlock)
+        case summary(title: String, counts: [(tier: Tier, count: Int)])
+    }
+
     private let sounds = SoundPlayer()
-    private var queue: [Unlock] = []
+    private var queue: [Item] = []
     private var panel: NSPanel?
 
     func show(_ unlock: Unlock) {
-        queue.append(unlock)
+        queue.append(.unlock(unlock))
+        presentNextIfIdle()
+    }
+
+    /// A one-off summary toast (e.g. after recalculating progress).
+    func showSummary(title: String, counts: [(tier: Tier, count: Int)]) {
+        queue.append(.summary(title: title, counts: counts))
         presentNextIfIdle()
     }
 
     private func presentNextIfIdle() {
         guard panel == nil, !queue.isEmpty else { return }
-        let unlock = queue.removeFirst()
+        let item = queue.removeFirst()
 
         let size = NSSize(width: 520, height: 110)
         let panel = ToastPanel(contentRect: NSRect(origin: .zero, size: size),
@@ -34,9 +45,17 @@ final class ToastPresenter {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isReleasedWhenClosed = false
 
-        panel.contentView = NSHostingView(rootView: ToastView(unlock: unlock) { [weak self] in
-            self?.dismiss()
-        })
+        let dismiss: () -> Void = { [weak self] in self?.dismiss() }
+        switch item {
+        case .unlock(let unlock):
+            panel.contentView = NSHostingView(rootView: ToastView(unlock: unlock, onDone: dismiss))
+            if UserDefaults.standard.object(forKey: "soundEnabled") as? Bool ?? true {
+                sounds.play(unlock.achievement.sound)
+            }
+        case .summary(let title, let counts):
+            panel.contentView = NSHostingView(rootView:
+                SummaryToastView(title: title, counts: counts, onDone: dismiss))
+        }
 
         if let screen = NSScreen.main {
             let frame = screen.visibleFrame
@@ -44,9 +63,6 @@ final class ToastPresenter {
         }
 
         self.panel = panel
-        if UserDefaults.standard.object(forKey: "soundEnabled") as? Bool ?? true {
-            sounds.play(unlock.achievement.sound)
-        }
         panel.orderFrontRegardless()
     }
 

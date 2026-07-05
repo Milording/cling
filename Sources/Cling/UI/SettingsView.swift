@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Binding var showDev: Bool
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginError: String?
+    @State private var confirmRecalculate = false
     @AppStorage("soundEnabled") private var soundEnabled = true
     @AppStorage("useRealityKit") private var useRealityKit = false
 
@@ -21,31 +22,7 @@ struct SettingsView: View {
                         Text(model.status.label).foregroundStyle(.secondary)
                     }
                 }
-                LabeledContent("Progress") {
-                    Button {
-                        model.recalculateFromLogs()
-                    } label: {
-                        if model.isRecalculating {
-                            HStack(spacing: 6) {
-                                ProgressView().controlSize(.small)
-                                Text("Recalculating\u{2026}")
-                            }
-                        } else {
-                            Text("Recalculate from logs")
-                        }
-                    }
-                    .disabled(model.isRecalculating)
-                }
-            } header: {
-                Text("Claude Code")
-            } footer: {
-                Text("Rebuild all achievement progress by replaying your full local Claude Code history. Normally only activity since Cling was installed is counted.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 2)
-            }
 
-            Section {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .disabled(!isBundled)
                     .onChange(of: launchAtLogin) { _, newValue in
@@ -84,8 +61,36 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
                 .padding(.top, 2)
             }
+
+            // Moved to the bottom.
+            Section {
+                LabeledContent {
+                    Button {
+                        confirmRecalculate = true
+                    } label: {
+                        if model.isRecalculating {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text("Recalculating\u{2026}")
+                            }
+                        } else {
+                            Text("Recalculate\u{2026}")
+                        }
+                    }
+                    .disabled(model.isRecalculating)
+                } label: {
+                    Text("Recalculate Progress")
+                    Text("Replay your full local Claude Code history to rebuild all achievement progress. Normally only activity since Cling was installed is counted.")
+                }
+            }
         }
         .formStyle(.grouped)
         .tint(Theme.accent)
+        .alert("Recalculate progress?", isPresented: $confirmRecalculate) {
+            Button("Cancel", role: .cancel) {}
+            Button("Recalculate", role: .destructive) { model.recalculateFromLogs() }
+        } message: {
+            Text("All achievement progress will be rebuilt from your full local Claude Code history. This replaces your current progress.")
+        }
     }
 }

@@ -1,5 +1,7 @@
 import SwiftUI
 import Observation
+import ImageIO
+import UniformTypeIdentifiers
 
 @MainActor
 @Observable
@@ -48,8 +50,19 @@ final class AppModel {
             }
         }
 
-        // Renders share cards to a directory and exits; used for design review from the CLI.
+        // Renders the unlock-toast animation to an animated GIF and exits (for the README).
         let arguments = ProcessInfo.processInfo.arguments
+        if let flagIndex = arguments.firstIndex(of: "--render-toast-gif"), arguments.count > flagIndex + 1 {
+            let url = URL(fileURLWithPath: arguments[flagIndex + 1])
+            Task { @MainActor in
+                monitor.stop()
+                let unlock = Unlock(achievement: Achievements.byID("millionaire-1")!, date: .now)
+                renderToastGIF(unlock, to: url)
+                NSApplication.shared.terminate(nil)
+            }
+        }
+
+        // Renders share cards to a directory and exits; used for design review from the CLI.
         if let flagIndex = arguments.firstIndex(of: "--render-cards"), arguments.count > flagIndex + 1 {
             let directory = URL(fileURLWithPath: arguments[flagIndex + 1])
             Task { @MainActor in
@@ -101,6 +114,12 @@ final class AppModel {
                     .frame(width: 360)
                     .environment(self)
                 render(detail, scale: 2, to: directory.appendingPathComponent("detail.png"))
+                let summary = SummaryToastView(
+                    title: "Unlocked 14 achievements",
+                    counts: [(.gold, 3), (.silver, 5), (.bronze, 6)],
+                    staticRender: true, onDone: {})
+                    .frame(width: 520, height: 110)
+                render(summary, scale: 2, to: directory.appendingPathComponent("summary.png"))
                 NSApplication.shared.terminate(nil)
             }
         }
@@ -130,13 +149,24 @@ final class AppModel {
 
             engine.reset()
             engine.state.installDate = .distantPast    // count the full history
-            _ = engine.process(result.events)          // ignore unlocks — silent backfill
+            let unlocks = engine.process(result.events) // applied silently (no toast flood)
             monitor.offsets = result.offsets
             refreshProjectDirs()
             persist()
 
             isRecalculating = false
             monitor.start()                            // resume live tailing
+
+            // Summarize the backfill: counts per tier, most-valuable tier first.
+            let counts = Tier.allCases.reversed().compactMap { tier -> (tier: Tier, count: Int)? in
+                let n = unlocks.filter { $0.achievement.tier == tier }.count
+                return n > 0 ? (tier, n) : nil
+            }
+            let total = unlocks.count
+            toasts.showSummary(
+                title: total == 0 ? "Progress recalculated"
+                                   : "Unlocked \(total) achievement\(total == 1 ? "" : "s")",
+                counts: counts)
         }
     }
 
@@ -179,6 +209,72 @@ final class AppModel {
     func devReset() {
         engine.reset()
         persist()
+    }
+
+    /// Renders the Xbox-style unlock animation as a looping GIF.
+    private func renderToastGIF(_ unlock: Unlock, to url: URL) {
+        let canvas = CGSize(width: 580, height: 150)
+        let fps = 20.0
+        let frameDelay = 1.0 / fps
+
+        // easeOutBack — overshoots past 1 before settling, for the badge spring-in.
+        func easeOutBack(_ t: Double) -> Double {
+            let c1 = 1.70158, c3 = c1 + 1
+            let p = t - 1
+            return 1 + c3 * p * p * p + c1 * p * p
+        }
+        func easeOut(_ t: Double) -> Double { 1 - (1 - t) * (1 - t) }
+        func easeIn(_ t: Double) -> Double { t * t }
+
+        struct Frame { var scale: CGFloat; var opacity: Double; var reveal: CGFloat; var delay: Double }
+        var frames: [Frame] = []
+
+        // 1. Badge springs in.
+        for i in 0..<12 {
+            let t = Double(i) / 11
+            frames.append(Frame(scale: 0.3 + 0.7 * easeOutBack(t),
+                                opacity: min(1, t * 4), reveal: 0, delay: frameDelay))
+        }
+        // 2. Pill expands and text reveals.
+        for i in 0..<10 {
+            let t = Double(i) / 9
+            frames.append(Frame(scale: 1, opacity: 1, reveal: easeOut(t), delay: frameDelay))
+        }
+        // 3. Hold, fully open.
+        frames.append(Frame(scale: 1, opacity: 1, reveal: 1, delay: 1.6))
+        // 4. Pill collapses back to the badge.
+        for i in 0..<7 {
+            let t = Double(i) / 6
+            frames.append(Frame(scale: 1, opacity: 1, reveal: 1 - easeIn(t), delay: frameDelay))
+        }
+        // 5. Badge shrinks and fades away.
+        for i in 0..<8 {
+            let t = Double(i) / 7
+            frames.append(Frame(scale: 1 - 0.7 * easeIn(t), opacity: 1 - easeIn(t),
+                                reveal: 0, delay: frameDelay))
+        }
+        // 6. Empty beat before the loop restarts.
+        frames.append(Frame(scale: 0.3, opacity: 0, reveal: 0, delay: 0.7))
+
+        guard let dest = CGImageDestinationCreateWithURL(
+            url as CFURL, UTType.gif.identifier as CFString, frames.count,
+            [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary
+        ) else { return }
+
+        for frame in frames {
+            let view = ToastGIFFrame(unlock: unlock, scale: frame.scale,
+                                     opacity: frame.opacity, reveal: frame.reveal)
+                .frame(width: canvas.width, height: canvas.height)
+            let renderer = ImageRenderer(content: view)
+            renderer.scale = 2
+            guard let cgImage = renderer.cgImage else { continue }
+            let properties = [kCGImagePropertyGIFDictionary: [
+                kCGImagePropertyGIFDelayTime: frame.delay,
+                kCGImagePropertyGIFUnclampedDelayTime: frame.delay,
+            ]] as CFDictionary
+            CGImageDestinationAddImage(dest, cgImage, properties)
+        }
+        CGImageDestinationFinalize(dest)
     }
 
     private func render(_ view: some View, scale: CGFloat, to url: URL) {
