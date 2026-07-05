@@ -88,15 +88,22 @@ final class AchievementEngine {
         return streak
     }
 
-    /// The peak 2-hour activity window (e.g. "11PM–1AM"), or nil if there's no data yet.
+    /// The peak 2-hour activity window, formatted for the user's locale
+    /// (e.g. "11PM–1AM" in the US, "23–01" in 24-hour Europe). Nil if there's no data.
     func mostActiveWindow() -> String? {
         guard let counts = state.hourCounts, let peak = counts.indices.max(by: { counts[$0] < counts[$1] }),
               counts[peak] > 0 else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        // "j" = locale-appropriate hour field (12-hour with AM/PM, or 24-hour).
+        formatter.setLocalizedDateFormatFromTemplate("j")
+        let calendar = Calendar.current
         func label(_ h: Int) -> String {
             let hour = ((h % 24) + 24) % 24
-            let period = hour < 12 ? "AM" : "PM"
-            let twelve = hour % 12 == 0 ? 12 : hour % 12
-            return "\(twelve)\(period)"
+            let date = calendar.date(from: DateComponents(hour: hour)) ?? Date()
+            // Drop the space some locales insert ("11 PM" → "11PM") for a compact range.
+            return formatter.string(from: date).replacingOccurrences(of: " ", with: "")
         }
         return "\(label(peak))–\(label(peak + 2))"
     }
