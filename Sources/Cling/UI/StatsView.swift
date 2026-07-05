@@ -45,23 +45,15 @@ struct StatsView: View {
                 .fill(LinearGradient(colors: [Theme.accent.opacity(0.16), Theme.accent.opacity(0.05)],
                                      startPoint: .topLeading, endPoint: .bottomTrailing))
 
-            // Decorative books + sparkles on the right.
-            HStack {
-                Spacer()
-                Image(systemName: "books.vertical.fill")
-                    .font(.system(size: 82))
-                    .foregroundStyle(Theme.accent.opacity(0.22))
-                    .rotationEffect(.degrees(-8))
-                    .padding(.trailing, 22)
+            // Decorative 3D books illustration, bottom-right.
+            if let books = Self.booksImage {
+                Image(nsImage: books)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 138)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(.trailing, 4)
             }
-            Image(systemName: "sparkle")
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.accent.opacity(0.5))
-                .offset(x: 232, y: 26)
-            Image(systemName: "sparkle")
-                .font(.system(size: 9))
-                .foregroundStyle(Theme.accent.opacity(0.4))
-                .offset(x: 256, y: 52)
 
             VStack(alignment: .leading, spacing: 0) {
                 iconCircle("square.3.layers.3d", filled: true)
@@ -88,11 +80,17 @@ struct StatsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top, 18)
-                .padding(.trailing, 120)
+                .padding(.trailing, 128)
             }
             .padding(20)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
+
+    /// The 3D books illustration, loaded once from the app bundle.
+    static let booksImage: NSImage? = Bundle.module
+        .url(forResource: "books", withExtension: "png")
+        .flatMap { NSImage(contentsOf: $0) }
 
     // MARK: - Grid card
 

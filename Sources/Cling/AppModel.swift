@@ -109,6 +109,14 @@ final class AppModel {
                 }
                 render(preview(.light), scale: 2, to: directory.appendingPathComponent("popover-light.png"))
                 render(preview(.dark), scale: 2, to: directory.appendingPathComponent("popover-dark.png"))
+                func statsPopover(_ scheme: ColorScheme) -> some View {
+                    PopoverView(staticRender: true, initialTab: .statistics)
+                        .background(Color(nsColor: .windowBackgroundColor))
+                        .environment(\.colorScheme, scheme)
+                        .environment(self)
+                }
+                render(statsPopover(.light), scale: 2,
+                       to: directory.appendingPathComponent("popover-stats.png"))
                 func stats(_ scheme: ColorScheme) -> some View {
                     StatsView()
                         .frame(width: 360)

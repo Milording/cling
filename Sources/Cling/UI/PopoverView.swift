@@ -10,11 +10,16 @@ struct PopoverView: View {
     @State private var showSettings = false
     @State private var showDev = false
     @State private var selected: Achievement?
-    @State private var tab: PopoverTab = .achievements
+    @State private var tab: PopoverTab
 
     /// When true, the achievement grid is drawn without a `ScrollView` so the
     /// whole popover renders in a single `ImageRenderer` pass (for screenshots).
     var staticRender = false
+
+    init(staticRender: Bool = false, initialTab: PopoverTab = .achievements) {
+        self.staticRender = staticRender
+        _tab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         ZStack {
@@ -35,9 +40,14 @@ struct PopoverView: View {
                         } else {
                             achievementList
                         }
-                    } else {
+                    } else if staticRender {
                         StatsView()
                         Spacer(minLength: 0)
+                    } else {
+                        // A ScrollView keeps the tab bar pinned; without it the tall
+                        // stats content overflows and pushes the tab bar off-screen.
+                        ScrollView { StatsView() }
+                            .frame(maxHeight: .infinity)
                     }
                 }
                 Divider()
