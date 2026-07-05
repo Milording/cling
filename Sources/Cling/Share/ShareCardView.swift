@@ -17,8 +17,8 @@ enum ShareCardLayout: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .vertical: "Story"
-        case .horizontal: "Post"
+        case .vertical: "Vertical"
+        case .horizontal: "Horizontal"
         }
     }
 }

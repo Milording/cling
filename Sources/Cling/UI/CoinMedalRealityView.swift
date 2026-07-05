@@ -8,6 +8,7 @@ import RealityKit
 struct CoinMedalRealityView: View {
     let achievement: Achievement
     let unlocked: Bool
+    var backText: String = ""
 
     var body: some View {
         RealityView { content in
@@ -68,7 +69,8 @@ struct CoinMedalRealityView: View {
             icon.position = [0, 0, half]
             coin.addChild(icon)
         }
-        if let text = await facePlane(CoinMedal.textImage("+\(achievement.points)P"), size: size) {
+        let back = backText.isEmpty ? "+\(achievement.points)P" : backText
+        if let text = await facePlane(CoinMedal.textImage(back), size: size) {
             text.position = [0, 0, -half]
             text.orientation = simd_quatf(angle: .pi, axis: [0, 1, 0])
             coin.addChild(text)

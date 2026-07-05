@@ -86,12 +86,19 @@ final class AppModel {
                                   ("daily-driver-4", 30.0)] {
                     let a = Achievements.byID(id)!
                     let image = CoinMedal.snapshot(achievement: a, unlocked: true,
-                                                   angle: deg * .pi / 180, size: 520)
+                                                   angle: deg * .pi / 180, size: 520,
+                                                   backText: "Jul 5, 2026")
                     if let data = NSBitmapImageRep(data: image.tiffRepresentation!)?
                         .representation(using: .png, properties: [:]) {
                         try? data.write(to: directory.appendingPathComponent("coin-\(id)-\(Int(deg)).png"))
                     }
                 }
+                let detail = AchievementDetailView(
+                    achievement: Achievements.byID("first-contact")!, unlockDate: .now,
+                    onClose: {}, staticRender: true)
+                    .frame(width: 360)
+                    .environment(self)
+                render(detail, scale: 2, to: directory.appendingPathComponent("detail.png"))
                 NSApplication.shared.terminate(nil)
             }
         }

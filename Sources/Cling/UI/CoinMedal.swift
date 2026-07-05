@@ -53,7 +53,9 @@ enum CoinMedal {
     // MARK: - Scene
 
     /// Builds a scene and returns the pivot node (rotate its `eulerAngles.y` to spin).
-    static func makeScene(achievement: Achievement, unlocked: Bool) -> (SCNScene, SCNNode, SCNNode) {
+    /// `backText` (e.g. the unlock date) is engraved on the reverse face.
+    static func makeScene(achievement: Achievement, unlocked: Bool,
+                          backText: String = "") -> (SCNScene, SCNNode, SCNNode) {
         let scene = SCNScene()
         let pivot = SCNNode()
 
@@ -68,7 +70,8 @@ enum CoinMedal {
             let coin = SCNNode(geometry: geometry)
             coin.addChildNode(facePlane(iconImage(achievement.icon),
                                         z: halfThickness + 0.004, flip: false))
-            coin.addChildNode(facePlane(textImage("+\(achievement.points)P"),
+            let back = backText.isEmpty ? "+\(achievement.points)P" : backText
+            coin.addChildNode(facePlane(textImage(back),
                                         z: -halfThickness - 0.004, flip: true))
             pivot.addChildNode(coin)
         }
@@ -101,8 +104,9 @@ enum CoinMedal {
 
     /// Offscreen render at a given rotation (radians). Used for screenshots/verification.
     static func snapshot(achievement: Achievement, unlocked: Bool,
-                         angle: Double, size: CGFloat) -> NSImage {
-        let (scene, pivot, cameraNode) = makeScene(achievement: achievement, unlocked: unlocked)
+                         angle: Double, size: CGFloat, backText: String = "") -> NSImage {
+        let (scene, pivot, cameraNode) = makeScene(achievement: achievement, unlocked: unlocked,
+                                                   backText: backText)
         pivot.eulerAngles = SCNVector3(0, CGFloat(angle), 0)
         let renderer = SCNRenderer(device: MTLCreateSystemDefaultDevice(), options: nil)
         renderer.scene = scene
@@ -138,7 +142,15 @@ enum CoinMedal {
     }
 
     static func textImage(_ string: String) -> NSImage {
-        engraved(string, font: .systemFont(ofSize: 150, weight: .heavy))
+        // Shrink the font until the text fits the coin face.
+        var size: CGFloat = 150
+        while size > 44 {
+            let font = NSFont.systemFont(ofSize: size, weight: .heavy)
+            let width = (string as NSString).size(withAttributes: [.font: font]).width
+            if width <= 512 * 0.86 { break }
+            size -= 8
+        }
+        return engraved(string, font: .systemFont(ofSize: size, weight: .heavy))
     }
 
     /// White glyph/text with a soft drop shadow, on transparent — reads as raised enamel.

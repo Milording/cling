@@ -5,6 +5,7 @@ import SceneKit
 struct CoinMedalView: NSViewRepresentable {
     let achievement: Achievement
     let unlocked: Bool
+    var backText: String = ""
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -16,7 +17,7 @@ struct CoinMedalView: NSViewRepresentable {
         view.allowsCameraControl = false
 
         let (scene, pivot, cameraNode) = CoinMedal.makeScene(achievement: achievement,
-                                                             unlocked: unlocked)
+                                                             unlocked: unlocked, backText: backText)
         view.scene = scene
         view.pointOfView = cameraNode
         context.coordinator.pivot = pivot
