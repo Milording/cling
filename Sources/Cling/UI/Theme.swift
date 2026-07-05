@@ -31,6 +31,18 @@ extension Color {
 }
 
 extension View {
+    /// A floating white/elevated card surface with a soft shadow, used across the popover.
+    func cardSurface(cornerRadius: CGFloat = 16) -> some View {
+        background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor)))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1))
+            .compositingGroup()
+            .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+    }
+
     /// Liquid Glass where available, translucent material otherwise.
     @ViewBuilder
     func glassCapsule() -> some View {

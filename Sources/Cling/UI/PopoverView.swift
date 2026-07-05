@@ -65,8 +65,8 @@ struct PopoverView: View {
             }
         }
         .frame(width: 360)
-        .frame(minHeight: staticRender ? nil : 500,
-               idealHeight: staticRender ? nil : 680,
+        .frame(minHeight: staticRender ? nil : 640,
+               idealHeight: staticRender ? nil : 820,
                maxHeight: staticRender ? nil : .infinity)
     }
 
@@ -120,7 +120,10 @@ struct PopoverView: View {
 
     private var summary: some View {
         let _ = model.stateVersion
-        return VStack(spacing: 10) {
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Your progress")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(model.totalPoints)")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
@@ -146,8 +149,11 @@ struct PopoverView: View {
                 ProgressBar(fraction: model.completionFraction, color: Theme.accent)
             }
         }
+        .padding(16)
+        .cardSurface()
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.top, 14)
+        .padding(.bottom, 4)
     }
 
     private var streakPill: some View {
