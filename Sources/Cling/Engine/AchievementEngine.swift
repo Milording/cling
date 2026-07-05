@@ -71,6 +71,19 @@ final class AchievementEngine {
 
     func value(for stat: String) -> Int { stats()[stat] ?? 0 }
 
+    /// The run of consecutive active days ending today or yesterday (0 if the streak is broken).
+    func currentStreak(now: Date = .now) -> Int {
+        guard let last = state.activityDays.max() else { return 0 }
+        guard last >= Self.dayOrdinal(now) - 1 else { return 0 }
+        var streak = 0
+        var day = last
+        while state.activityDays.contains(day) {
+            streak += 1
+            day -= 1
+        }
+        return streak
+    }
+
     func progress(for id: String) -> Double? {
         guard let a = Achievements.byID(id), a.goal > 1 else { return nil }
         let v = value(for: a.stat)

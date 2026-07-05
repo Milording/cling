@@ -77,20 +77,46 @@ struct PopoverView: View {
 
     private var summary: some View {
         let _ = model.stateVersion
-        return HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("\(model.totalPoints)")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(Theme.accent)
-            Text("P")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Theme.accent.opacity(0.7))
-            Spacer()
-            Text("\(model.unlockedCount) of \(Achievements.all.count) unlocked")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        return VStack(spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(model.totalPoints)")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.accent)
+                Text("P")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.accent.opacity(0.7))
+                Spacer()
+                if model.currentStreak >= 1 {
+                    streakPill
+                }
+            }
+            VStack(spacing: 6) {
+                HStack {
+                    Text("\(model.unlockedCount) of \(model.totalAchievements) unlocked")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(model.completionPercent)%")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                ProgressBar(fraction: model.completionFraction, color: Theme.accent)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+    }
+
+    private var streakPill: some View {
+        HStack(spacing: 5) {
+            LucideText(icon: .flame, size: 12)
+            Text("\(model.currentStreak) day streak")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+        }
+        .foregroundStyle(Theme.accent)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(Theme.accent.opacity(0.15)))
     }
 
     private var achievementList: some View {

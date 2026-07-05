@@ -69,6 +69,8 @@ final class AppModel {
                 // Force a couple of unlocks (in-memory only) so the grid shows both states.
                 engine.unlock("first-contact")
                 engine.unlock("multitasker")
+                let today = AchievementEngine.dayOrdinal(.now)
+                engine.state.activityDays = [today, today - 1, today - 2]
                 stateVersion += 1
                 func preview(_ scheme: ColorScheme) -> some View {
                     PopoverView(staticRender: true)
@@ -106,6 +108,10 @@ final class AppModel {
 
     var totalPoints: Int { engine.totalPoints }
     var unlockedCount: Int { engine.state.unlocked.count }
+    var totalAchievements: Int { Achievements.all.count }
+    var completionFraction: Double { Double(unlockedCount) / Double(totalAchievements) }
+    var completionPercent: Int { Int((completionFraction * 100).rounded()) }
+    var currentStreak: Int { engine.currentStreak() }
 
     func progress(for id: String) -> Double? { engine.progress(for: id) }
     func progressCaption(for id: String) -> String? { engine.progressCaption(for: id) }
