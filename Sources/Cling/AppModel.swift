@@ -94,10 +94,12 @@ final class AppModel {
                 engine.unlock("first-contact")
                 engine.unlock("multitasker")
                 let today = AchievementEngine.dayOrdinal(.now)
-                engine.state.activityDays = [today, today - 1, today - 2]
-                engine.state.tokens = 47_200_000
-                engine.state.costCents = 18_640
-                engine.state.hourCounts = { var h = Array(repeating: 2, count: 24); h[23] = 40; return h }()
+                var days = Set((0..<4).map { today - $0 })          // a current 4-day streak
+                days.formUnion((10..<154).map { today - $0 })       // 148 active days total
+                engine.state.activityDays = days
+                engine.state.tokens = 532_900_000
+                engine.state.costCents = 139_380
+                engine.state.hourCounts = { var h = Array(repeating: 2, count: 24); h[16] = 40; h[17] = 38; return h }()
                 stateVersion += 1
                 func preview(_ scheme: ColorScheme) -> some View {
                     PopoverView(staticRender: true)
@@ -161,6 +163,13 @@ final class AppModel {
     var statCostDollars: Double { engine.state.costCents / 100 }
     var statLongestStreak: Int { engine.value(for: Achievements.sStreak) }
     var statMostActive: String? { engine.mostActiveWindow() }
+    /// Number of distinct days with any activity.
+    var statActiveDays: Int { engine.state.activityDays.count }
+    /// Average tokens per active day.
+    var statAveragePerDay: Int {
+        let days = engine.state.activityDays.count
+        return days > 0 ? engine.state.tokens / days : 0
+    }
 
     /// True while a full-history recalculation is running.
     private(set) var isRecalculating = false

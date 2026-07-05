@@ -96,8 +96,8 @@ final class AchievementEngine {
 
         let formatter = DateFormatter()
         formatter.locale = .current
-        // "j" = locale-appropriate hour field (12-hour with AM/PM, or 24-hour).
-        formatter.setLocalizedDateFormatFromTemplate("j")
+        // "jmm" = locale-appropriate hour:minute ("16:00" in 24-hour, "4:00PM" in 12-hour).
+        formatter.setLocalizedDateFormatFromTemplate("jmm")
         let calendar = Calendar.current
         func label(_ h: Int) -> String {
             let hour = ((h % 24) + 24) % 24

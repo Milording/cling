@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The Statistics tab: a grid of headline numbers about your Claude Code usage.
+/// The Statistics tab: a hero "tokens used" card plus a grid of usage numbers.
 struct StatsView: View {
     @Environment(AppModel.self) private var model
 
@@ -15,13 +15,19 @@ struct StatsView: View {
 
     var body: some View {
         let _ = model.stateVersion
-        LazyVGrid(columns: columns, spacing: 12) {
-            card("Tokens used", Self.compact(model.statTokens),
-                 caption: Self.tokensBlurb(model.statTokens))
-            card("Spent on tokens", String(format: "$%.2f", model.statCostDollars),
-                 info: costInfo)
-            card("Longest streak", streakText)
-            card("Most active", model.statMostActive ?? "—")
+        VStack(spacing: 12) {
+            hero
+            LazyVGrid(columns: columns, spacing: 12) {
+                gridCard(icon: "dollarsign", label: "Estimated spend",
+                         value: Self.money(model.statCostDollars),
+                         sub: "Total on tokens", info: costInfo)
+                gridCard(icon: "flame.fill", label: "Longest streak",
+                         value: streakText, sub: "Keep it going!")
+                gridCard(icon: "clock", label: "Most active hours",
+                         value: model.statMostActive ?? "—", sub: "Your daily peak")
+                gridCard(icon: "chart.line.uptrend.xyaxis", label: "Average per day",
+                         value: Self.compact(model.statAveragePerDay), sub: "Tokens used")
+            }
         }
         .padding(16)
     }
@@ -31,33 +37,110 @@ struct StatsView: View {
         return "\(n) day\(n == 1 ? "" : "s")"
     }
 
-    private func card(_ label: String, _ value: String,
-                      caption: String? = nil, info: String? = nil) -> some View {
+    // MARK: - Hero
+
+    private var hero: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(LinearGradient(colors: [Theme.accent.opacity(0.16), Theme.accent.opacity(0.05)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+
+            // Decorative books + sparkles on the right.
+            HStack {
+                Spacer()
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 82))
+                    .foregroundStyle(Theme.accent.opacity(0.22))
+                    .rotationEffect(.degrees(-8))
+                    .padding(.trailing, 22)
+            }
+            Image(systemName: "sparkle")
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.accent.opacity(0.5))
+                .offset(x: 232, y: 26)
+            Image(systemName: "sparkle")
+                .font(.system(size: 9))
+                .foregroundStyle(Theme.accent.opacity(0.4))
+                .offset(x: 256, y: 52)
+
+            VStack(alignment: .leading, spacing: 0) {
+                iconCircle("square.3.layers.3d", filled: true)
+                Text("Tokens used")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.top, 12)
+                Text(Self.compact(model.statTokens))
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.accent)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Theme.accent)
+                    .frame(width: 34, height: 4)
+                    .padding(.top, 4)
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "book")
+                        .font(.system(size: 17))
+                        .foregroundStyle(Theme.accent)
+                    Text(Self.tokensBlurb(model.statTokens))
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 18)
+                .padding(.trailing, 120)
+            }
+            .padding(20)
+        }
+    }
+
+    // MARK: - Grid card
+
+    private func gridCard(icon: String, label: String, value: String,
+                          sub: String, info: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 4) {
-                Text(label)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 0) {
+                iconCircle(icon, filled: false)
                 Spacer(minLength: 0)
                 if let info { InfoButton(text: info) }
             }
+            .padding(.bottom, 2)
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Text(value)
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.accent)
-                .minimumScaleFactor(0.6)
                 .lineLimit(1)
-            if let caption {
-                Text(caption)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 1)
-            }
+                .minimumScaleFactor(0.7)
+            Text(sub)
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(maxHeight: .infinity, alignment: .top)
-        .padding(16)
+        .padding(14)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color.secondary.opacity(0.09)))
+    }
+
+    private func iconCircle(_ icon: String, filled: Bool) -> some View {
+        Image(systemName: icon)
+            .font(.system(size: filled ? 19 : 15, weight: .medium))
+            .foregroundStyle(filled ? AnyShapeStyle(.white) : AnyShapeStyle(Theme.accent))
+            .frame(width: filled ? 44 : 34, height: filled ? 44 : 34)
+            .background(Circle().fill(filled ? AnyShapeStyle(Theme.accent)
+                                            : AnyShapeStyle(Theme.accent.opacity(0.15))))
+    }
+
+    /// USD is billed in dollars; group US-style ("$1,393.80") regardless of locale.
+    static func money(_ dollars: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        return "$" + (formatter.string(from: dollars as NSNumber) ?? String(format: "%.2f", dollars))
     }
 
     /// 47_200_000 → "47.2M", 4_820 → "4.8K".
@@ -70,19 +153,19 @@ struct StatsView: View {
         }
     }
 
-    /// A tongue-in-cheek reading-comparison for the token count, in 10 tiers up to 10B.
+    /// A reading-comparison for the token count, in 10 tiers up to 10B.
     static func tokensBlurb(_ n: Int) -> String {
         switch n {
-        case ..<100_000:        return "A quick coffee-chat's worth of words."
-        case ..<1_000_000:      return "One short story — two, if they're bad."
-        case ..<10_000_000:     return "A whole novel, the beach-read kind."
-        case ..<50_000_000:     return "Like reading War and Peace. Twice."
-        case ..<100_000_000:    return "All of Lord of the Rings, appendices and all."
-        case ..<500_000_000:    return "Every Harry Potter book, back to back."
-        case ..<1_000_000_000:  return "A shelf of encyclopedias. Remember those?"
-        case ..<5_000_000_000:  return "More words than you'll speak in a lifetime."
-        case ..<10_000_000_000: return "Nearing the Library of Alexandria — mind the torches."
-        default:                return "Ten billion tokens. Historians will study you."
+        case ..<100_000:        return "One Philosopher's Stone."
+        case ..<1_000_000:      return "A journey through the whole Lord of the Rings."
+        case ..<10_000_000:     return "Seven complete trips through Harry Potter."
+        case ..<50_000_000:     return "Sixty-four copies of War and Peace."
+        case ..<100_000_000:    return "Shakespeare's complete works, eighty-five times over."
+        case ..<500_000_000:    return "The entire Harry Potter series, 345 times."
+        case ..<1_000_000_000:  return "Shakespeare's complete works, around 850 times."
+        case ..<5_000_000_000:  return "Three quarters of English Wikipedia."
+        case ..<10_000_000_000: return "One and a half English Wikipedias."
+        default:                return "English Wikipedia once, then halfway through it again."
         }
     }
 }
