@@ -136,7 +136,7 @@ struct AchievementDetailView: View {
 
     private var shareControls: some View {
         VStack(spacing: 14) {
-            HStack(spacing: 16) {
+            HStack(alignment: .bottom, spacing: 16) {
                 ForEach(ShareCardLayout.allCases) { layout in tile(layout) }
             }
             HStack(spacing: 20) {
@@ -155,19 +155,24 @@ struct AchievementDetailView: View {
 
     private func tile(_ layout: ShareCardLayout) -> some View {
         let selected = orientation == layout
-        return VStack(spacing: 6) {
+        // Size each tile to the card's own aspect ratio so the full card shows,
+        // uncropped, at a common height. (Height capped so the wide horizontal
+        // tile and the narrow vertical tile both fit the popover width.)
+        let height: CGFloat = 118
+        let width = height * (layout.size.width / layout.size.height)
+        return VStack(spacing: 7) {
             Group {
                 if let image = thumbnails[layout] {
-                    Image(nsImage: image).resizable().scaledToFill()
+                    Image(nsImage: image).resizable().scaledToFit()
                 } else {
                     Rectangle().fill(.quaternary.opacity(0.5))
                 }
             }
-            .frame(width: 118, height: 66)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(
+            .frame(width: width, height: height)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(
                 selected ? Theme.accent : Color.secondary.opacity(0.25),
-                lineWidth: selected ? 2 : 1))
+                lineWidth: selected ? 2.5 : 1))
             Text(layout.label)
                 .font(.caption)
                 .foregroundStyle(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
