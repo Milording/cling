@@ -2,167 +2,172 @@
 
 # 🏆 Cling
 
-### Xbox-style achievements for your Claude Code usage.
+### Xbox-style achievements for Claude Code.
 
-Cling quietly watches how you use [Claude Code](https://claude.com/claude-code) and rewards you with
-**achievements, points, and a satisfying unlock toast + sound** the moment you hit a milestone.
-It's a tiny, native, privacy-first menu bar app that makes your terminal sessions feel like a game.
+Cling is a native macOS menu bar app that tracks your local Claude Code activity and unlocks achievements as you work.
 
 [![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-black?logo=apple)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-6-orange?logo=swift)](https://swift.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/Milording/cling?style=social)](https://github.com/Milording/cling/stargazers)
 
-<img src="assets/popover-light.png" width="330" alt="Cling achievements grid (light)"> <img src="assets/popover-dark.png" width="330" alt="Cling achievements grid (dark)">
+<img src="assets/popover-light.png" width="330" alt="Cling achievements grid in light mode"> <img src="assets/popover-dark.png" width="330" alt="Cling achievements grid in dark mode">
 
 </div>
 
----
+## What it does
 
-## ✨ What is this?
+Cling reads Claude Code transcripts stored on your Mac and tracks milestones such as token usage, commits, streaks, late-night sessions, project activity, and more.
 
-You already spend hours in Claude Code. Cling turns that time into a game. It reads your **local**
-Claude Code transcripts, tracks your progress toward a set of achievements, and celebrates every
-unlock with an Xbox 360–style toast — including a sound effect — in the corner of your screen.
+When you unlock an achievement, it shows a toast with a sound inspired by Xbox 360 achievements.
 
 <div align="center">
-<img src="assets/toast.gif" width="560" alt="Achievement unlocked toast animation">
+<img src="assets/toast.gif" width="560" alt="Achievement unlock animation">
 </div>
 
-Tap any medal to flip it into a **real 3D coin** — spin it with your mouse, icon on the front, points on the back:
+Achievements are displayed as interactive 3D coins. Drag them to rotate and view the points on the back.
 
 <div align="center">
-<img src="assets/coin.gif" width="240" alt="Spinnable 3D coin medal">
+<img src="assets/coin.gif" width="240" alt="Interactive 3D achievement coin">
 </div>
 
-## 🎮 Features
+## Features
 
-- **🏅 Achievement system** — **67 achievements** across Bronze, Silver, Gold, and Platinum tiers, worth 2,125 points, including secret hidden ones.
-- **🪙 Spinnable 3D coin medals** — each achievement is a photoreal metal coin (bronze/silver/gold) you can drag to rotate, with inertia.
-- **🔔 Xbox-style unlock toasts** — a springy badge animation with a real sound, that you can hover to keep open.
-- **🖼️ Shareable cards** — turn any unlocked achievement into a polished image for your socials (vertical *story* and horizontal *post* layouts).
-- **🧭 Menu bar native** — a clean, [Numi](https://numi.app)-inspired popover; no Dock icon, no clutter, follows light/dark mode.
-- **🟢 Live status** — a dot shows when Claude Code is actively working.
-- **🔒 100% local & private** — everything is read from `~/.claude` on your Mac. Nothing is ever sent anywhere. No account, no telemetry, no network calls.
-- **🧪 Dev mode** — preview, force-unlock, and inject test events to try every achievement.
-- **🪶 Featherweight** — native SwiftUI, zero third-party dependencies, a few MB of RAM.
+- 67 achievements across Bronze, Silver, Gold, and Platinum tiers
+- Hidden achievements
+- Token, activity, and usage statistics
+- Light and dark mode
+- Native SwiftUI app with zero third-party dependencies
 
-## 🏆 Achievements
+All data stays on your Mac. Cling has no account system, telemetry, or network layer.
 
-67 achievements, earned live from your local Claude Code activity — a few tastes:
+## Achievements
 
-| Tier | Achievement | How to unlock |
-|:----:|-------------|---------------|
-| 🥉 Bronze | **First Contact** | Send your very first message |
-| 🥉 Bronze | **Night Owl I** | Code 10 nights between midnight and 5 AM |
-| 🥉 Bronze | **Git Gud I** | 10 git commits |
+A few examples:
+
+| Tier | Achievement | Requirement |
+|:----:|-------------|-------------|
+| 🥉 Bronze | **First Contact** | Send your first message |
+| 🥉 Bronze | **Night Owl I** | Work during 10 nights between midnight and 5 AM |
+| 🥉 Bronze | **Git Gud I** | Make 10 Git commits |
 | 🥈 Silver | **Millionaire's Club II** | Generate 10,000,000 tokens |
-| 🥈 Silver | **Weekend Warrior** | Code both days of 10 weekends |
+| 🥈 Silver | **Weekend Warrior** | Work on both days of 10 weekends |
 | 🥈 Silver | **Potty Mouth II** | Swear 25 times |
-| 🥇 Gold | **Daily Driver III** | A 100-day streak |
-| 🥇 Gold | **Car Payment** | $500 of estimated usage |
-| 💎 Platinum | **Daily Driver IV** | A 365-day streak |
-| 💎 Platinum | **100% Claude Completion** | Unlock everything else |
+| 🥇 Gold | **Daily Driver III** | Reach a 100-day streak |
+| 🥇 Gold | **Car Payment** | Reach $500 in estimated usage |
+| 💎 Platinum | **Daily Driver IV** | Reach a 365-day streak |
+| 💎 Platinum | **100% Claude Completion** | Unlock every other achievement |
 
-…plus tiered **Millionaire's Club**, **Thank You Please**, **Doctor**, **Feedback**, **Context Goblin**, **Project Hopper**, **Approver**, **CTRL+C Rage Quit** ladders — and a handful of **🔒 hidden** ones you'll have to discover yourself.
+Some achievements are hidden until you unlock them.
 
 <div align="center">
 <img src="assets/card-horizontal.png" width="560" alt="Shareable achievement card">
-<br><em>Every unlocked achievement can be shared as an image like this.</em>
+<br>
+<em>Unlocked achievements can be exported as shareable images.</em>
 </div>
 
-## 🚀 Install
+## Install
 
-Cling builds from source with the Swift toolchain that ships with Xcode 15+ (Xcode 26 recommended).
+Cling requires macOS 14 or newer and the Swift toolchain included with Xcode 15 or newer.
 
 ```sh
 git clone https://github.com/Milording/cling.git
 cd cling
-scripts/bundle.sh --install     # builds and copies Cling.app to /Applications
+scripts/bundle.sh --install
 open /Applications/Cling.app
 ```
 
-Or just run it in place:
+To build without installing:
 
 ```sh
-scripts/bundle.sh               # builds dist/Cling.app
+scripts/bundle.sh
 open dist/Cling.app
 ```
 
-The app lives only in your menu bar (look for the 🏆). To start tracking, just use Claude Code as usual —
-achievements are earned **live** from the moment you first launch Cling (your past history isn't back-filled).
+Cling appears in the menu bar as a trophy icon.
 
-> **Note:** Cling is unsigned/un-notarized open-source software. On first launch macOS may ask you to
-> approve it in **System Settings → Privacy & Security**.
+Tracking begins after the first launch. Existing Claude Code history is not imported.
+
+> Cling is currently unsigned and unnotarized. macOS may require approval under **System Settings → Privacy & Security** after the first launch.
 
 ### Launch at login
 
-Enable **Launch at login** from the gear menu (requires the app to be in `/Applications`, i.e. installed
-with `scripts/bundle.sh --install`).
+Open Cling settings and enable **Launch at login**.
 
-## 🧠 How it works
+The app must be installed in `/Applications` for this option to work.
 
-Claude Code stores every session as a JSONL transcript under `~/.claude/projects/`. Cling tails those
-files, extracts the events it cares about (messages, token usage, timestamps, session IDs), and runs
-them through a small, fully unit-tested achievement engine. Progress is saved to
-`~/Library/Application Support/Cling/state.json`.
+## Privacy
 
-There is **no network layer at all** — Cling never sends your data anywhere.
+Claude Code stores transcripts under:
 
-## 🧪 Dev mode
+```text
+~/.claude/projects/
+```
 
-Turn on **Dev mode** in Settings (the gear icon) to reveal a test panel where you can preview any toast,
-force-unlock achievements, reset progress, and inject synthetic events (a 1 AM message, a 31-minute wait,
-a full 6-hour marathon, and so on) to exercise the real rules.
+Cling reads those files locally and saves progress to:
 
-## 🛠️ Development
+```text
+~/Library/Application Support/Cling/state.json
+```
+
+Nothing is uploaded or sent to an external service.
+
+## Development
 
 ```sh
-swift build          # compile
-swift test           # run the engine + parser unit tests
-scripts/bundle.sh    # assemble dist/Cling.app
+swift build
+swift test
+scripts/bundle.sh
 ```
 
-The project is a plain Swift Package — no `.xcodeproj` required. Everything builds and tests from the CLI.
+The project uses Swift Package Manager and can be built entirely from the command line.
 
-```
+```text
 Sources/Cling/
-├── Monitor/   # tails ~/.claude transcripts, parses JSONL → events
-├── Engine/    # the achievement rules + persistence (pure, unit-tested)
-├── Toast/     # the Xbox-style unlock overlay
-├── UI/        # menu bar popover, medal grid, settings, dev mode
-├── Share/     # social share-card rendering
-└── Support/   # sounds, Lucide icons, login item, status
+├── Monitor/   # Transcript monitoring and JSONL parsing
+├── Engine/    # Achievement rules and persistence
+├── Toast/     # Unlock notifications
+├── UI/        # Menu bar interface and settings
+├── Share/     # Achievement card rendering
+└── Support/   # Sounds, icons, login item, and status
 ```
 
-## 🗺️ Roadmap
+### Developer mode
 
-- [ ] Signed & notarized release + Homebrew cask
-- [ ] More achievements (streaks, weekend warrior, polyglot…)
-- [ ] Claude Desktop as a second tracked source
-- [ ] Custom achievement sounds & themes
-- [ ] iCloud sync of progress across Macs
+Enable **Dev mode** in settings to:
 
-Ideas and PRs very welcome — see below.
+- preview unlock notifications
+- force-unlock achievements
+- reset progress
+- inject test activity
+- test time-based and session-based rules
 
-## 🤝 Contributing
+## Roadmap
 
-Contributions are welcome! Open an issue to discuss a feature or bug, or send a PR. New achievements are
-especially easy to add — they're just small rules in `Sources/Cling/Engine`. Please run `swift test`
-before submitting.
+- [ ] Claude Desktop support
 
-## 🙏 Credits
+## Contributing
 
-- Icons by [Lucide](https://lucide.dev) (ISC License).
-- Popover design inspired by the lovely [Numi](https://numi.app).
-- Built for [Claude Code](https://claude.com/claude-code).
+Issues and pull requests are welcome.
 
-## 📄 License
+New achievements are implemented as small rules inside `Sources/Cling/Engine`.
+
+Please run the test suite before submitting a pull request:
+
+```sh
+swift test
+```
+
+## Credits
+
+- Icons by [Lucide](https://lucide.dev)
+- Interface inspired by [Numi](https://numi.app)
+- Built for [Claude Code](https://claude.com/claude-code)
+
+## License
 
 [MIT](LICENSE) © Anton Mitrofanov
 
----
-
 <div align="center">
-<sub>If Cling made your terminal a little more fun, consider leaving a ⭐ — it genuinely helps.</sub>
+<sub>Found Cling useful? Consider leaving a ⭐</sub>
 </div>
