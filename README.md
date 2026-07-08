@@ -25,7 +25,7 @@ When you unlock an achievement, it shows a toast with a sound inspired by Xbox 3
 <img src="assets/toast.gif" width="560" alt="Achievement unlock animation">
 </div>
 
-Achievements are displayed as interactive 3D coins. Drag them to rotate and view the points on the back.
+Achievements are displayed as interactive 3D coins. Drag them to rotate and view the date on the back.
 
 <div align="center">
 <img src="assets/coin.gif" width="240" alt="Interactive 3D achievement coin">
